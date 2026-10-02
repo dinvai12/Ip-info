@@ -165,36 +165,6 @@ body{
   font-size:16px;
 }
 
-.privacy-box{
-  margin:0 0 14px;
-  padding:14px 12px;
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:14px;
-  background:rgba(0,0,0,.16);
-}
-.privacy-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:12px;
-}
-.privacy-label{
-  color:#929caf;
-  font-size:14px;
-}
-.privacy-value{
-  font-size:15px;
-  font-weight:800;
-}
-.privacy-value.yes{ color:#ff6b6b; }
-.privacy-value.no{ color:#00ff9d; }
-.privacy-value.possible{ color:#ffd166; }
-.privacy-type{
-  margin-top:6px;
-  color:#9da7ba;
-  font-size:12px;
-  text-align:right;
-}
 .status{
   text-align:center;
   color:#9da7ba;
@@ -219,6 +189,21 @@ body{
   color:#00e5ff;
   font-weight:700;
 }
+
+
+.menu-row{display:flex;justify-content:flex-end;margin-bottom:14px;}
+.menu-btn{border:1px solid rgba(0,229,255,.35);background:rgba(0,229,255,.08);color:#00e5ff;border-radius:12px;padding:10px 15px;font-weight:700;cursor:pointer;}
+.menu-btn:hover{background:rgba(0,229,255,.15);}
+.vpn-panel{display:none;}
+.vpn-verdict{text-align:center;padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(0,0,0,.18);margin-bottom:14px;font-size:20px;font-weight:800;color:#00e5ff;}
+.vpn-sub{text-align:center;color:#929caf;font-size:13px;margin-top:6px;font-weight:400;}
+.source-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid rgba(255,255,255,.07);}
+.source-name{color:#fff;font-size:14px;font-weight:700;}
+.source-status{text-align:right;font-size:13px;font-weight:700;}
+.source-yes{color:#ff6b6b;}
+.source-no{color:#00ff9d;}
+.source-na{color:#f0c36b;}
+.back-btn{margin-bottom:14px;border:0;background:transparent;color:#00e5ff;cursor:pointer;font-weight:700;}
 
 @media(max-width:500px){
   .header h1{
@@ -254,7 +239,11 @@ body{
     <p>Your Public Network Information</p>
   </div>
 
-  <div class="search-box">
+  <div class="menu-row">
+    <button id="vpnBtn" class="menu-btn">🛡️ VPN Checker</button>
+  </div>
+
+  <div class="search-box" id="searchBox">
 
     <div class="search-title">
       🔎 Search IP Address
@@ -289,6 +278,14 @@ body{
     </div>
   </div>
 
+  <div class="card vpn-panel" id="vpnPanel">
+    <button id="backBtn" class="back-btn">← Back to IP Info</button>
+    <div class="section-title">VPN Checker</div>
+    <div id="vpnResult">
+      <div class="status">Ready to check your current public IP.</div>
+    </div>
+  </div>
+
   <div class="footer">
     Information provided by Cloudflare<br>
     <span class="made">MADE BY DINUU</span>
@@ -304,6 +301,11 @@ const card = document.getElementById("infoCard");
 const input = document.getElementById("ipInput");
 const searchBtn = document.getElementById("searchBtn");
 const myIpBtn = document.getElementById("myIpBtn");
+const vpnBtn = document.getElementById("vpnBtn");
+const backBtn = document.getElementById("backBtn");
+const searchBox = document.getElementById("searchBox");
+const vpnPanel = document.getElementById("vpnPanel");
+const vpnResult = document.getElementById("vpnResult");
 
 
 function showLoading(text){
@@ -320,7 +322,7 @@ function showError(text){
 }
 
 
-function showData(data, showPrivacy = false){
+function showData(data){
 
   if(!data){
     showError("No information received.");
@@ -353,23 +355,6 @@ function showData(data, showPrivacy = false){
         ${data.ip || "Unknown"}
       </span>
     </div>
-
-    ${showPrivacy ? `
-    <div class="privacy-box">
-      <div class="privacy-head">
-        <span class="privacy-label">🛡️ VPN / Proxy Detection</span>
-        <span class="privacy-value ${
-          data.vpnProxy === "YES" ? "yes" :
-          data.vpnProxy === "POSSIBLE" ? "possible" : "no"
-        }">
-          ${data.vpnProxy || "Unknown"}
-        </span>
-      </div>
-      <div class="privacy-type">
-        ${data.vpnProxyType || "Detection unavailable"}
-      </div>
-    </div>
-    ` : ""}
 
     <div class="row">
       <span class="label">Country</span>
@@ -468,7 +453,7 @@ async function loadMyIP(){
 
     const data = await response.json();
 
-    showData(data, true);
+    showData(data);
 
   }catch(error){
 
@@ -516,7 +501,7 @@ async function searchIP(){
       );
     }
 
-    showData(data, false);
+    showData(data);
 
   }catch(error){
 
@@ -529,10 +514,56 @@ async function searchIP(){
 }
 
 
+async function openVpnChecker(){
+  searchBox.style.display = "none";
+  infoCard.style.display = "none";
+  vpnPanel.style.display = "block";
+  vpnResult.innerHTML = '<div class="status">Checking your IP with 5 VPN detection sources...</div>';
+
+  try{
+    const response = await fetch("/vpn", { cache:"no-store" });
+    const data = await response.json();
+    if(!response.ok || data.error) throw new Error(data.message || "VPN check failed.");
+
+    const verdictClass = data.positive >= 3 ? "source-yes" : data.positive >= 1 ? "source-na" : "source-no";
+    let html = `
+      <div class="vpn-verdict ${verdictClass}">
+        ${data.verdict}
+        <div class="vpn-sub">${data.ip} · ${data.positive}/${data.checked} sources flagged VPN</div>
+      </div>
+      <div class="section-title">Multi-Source Results</div>
+    `;
+
+    Object.values(data.sources).forEach(source => {
+      const cls = source.detected === true ? "source-yes" : source.detected === false ? "source-no" : "source-na";
+      const icon = source.detected === true ? "🔴" : source.detected === false ? "🟢" : "🟡";
+      html += `
+        <div class="source-row">
+          <span class="source-name">${icon} ${source.name}</span>
+          <span class="source-status ${cls}">${source.status}</span>
+        </div>
+      `;
+    });
+
+    vpnResult.innerHTML = html;
+  }catch(error){
+    vpnResult.innerHTML = `<div class="error">${error.message || "VPN check unavailable."}</div>`;
+  }
+}
+
+function closeVpnChecker(){
+  vpnPanel.style.display = "none";
+  searchBox.style.display = "block";
+  infoCard.style.display = "block";
+}
+
 searchBtn.addEventListener(
   "click",
   searchIP
 );
+
+vpnBtn.addEventListener("click", openVpnChecker);
+backBtn.addEventListener("click", closeVpnChecker);
 
 
 myIpBtn.addEventListener(
