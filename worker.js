@@ -149,23 +149,44 @@ export default {
           } catch {}
         })());
 
-        // 7) Scamalytics — API key/account required. Their API output can vary
-        // by plan, so accept common explicit VPN boolean/label fields.
+        // 7) Scamalytics — username + API key required.
+        // The account is tied to the node selected at signup. If no
+        // SCAMALYTICS_API_BASE secret is set, try both documented nodes and
+        // use the first successful response.
         jobs.push((async () => {
-          if (!env.SCAMALYTICS_API_KEY) return;
-          try {
-            if (!env.SCAMALYTICS_USERNAME || !env.SCAMALYTICS_API_KEY) return;
+          if (!env.SCAMALYTICS_USERNAME || !env.SCAMALYTICS_API_KEY) return;
+
+          const configured = env.SCAMALYTICS_API_BASE
+            ? [env.SCAMALYTICS_API_BASE]
+            : [
+                "https://api12.scamalytics.com/v3/",
+                "https://api11.scamalytics.com/v3/"
+              ];
+
+          for (const base of configured) {
             try {
-              const base = env.SCAMALYTICS_API_BASE || "https://api12.scamalytics.com/v3/";
-              const r = await safeFetch(
-                `${base.replace(/\/?$/, "/")}${encodeURIComponent(env.SCAMALYTICS_USERNAME)}?key=${encodeURIComponent(env.SCAMALYTICS_API_KEY)}&ip=${encodeURIComponent(clientIP)}`
-              );
-              if (!r.ok) return;
+              const endpoint =
+                `${base.replace(/\/?$/, "/")}` +
+                `${encodeURIComponent(env.SCAMALYTICS_USERNAME)}` +
+                `?key=${encodeURIComponent(env.SCAMALYTICS_API_KEY)}` +
+                `&ip=${encodeURIComponent(clientIP)}`;
+
+              const r = await safeFetch(endpoint, {}, 6000);
+              if (!r.ok) continue;
+
               const d = await r.json();
-              const yes = d?.scamalytics?.scamalytics_proxy?.is_vpn === true;
-              if (typeof yes === "boolean") setSource("scamalytics", yes);
+              const s = d?.scamalytics;
+
+              // HTTP 200 can still contain an application-level error.
+              if (s?.status !== "ok") continue;
+
+              const yes = s?.scamalytics_proxy?.is_vpn === true;
+              if (typeof yes === "boolean") {
+                setSource("scamalytics", yes);
+                break;
+              }
             } catch {}
-          } catch {}
+          }
         })());
 
         // 8) IPinfo Privacy — token required and privacy detection access required.
