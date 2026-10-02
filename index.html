@@ -9,87 +9,239 @@
   <style>
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
     }
 
     body {
-      margin: 0;
       min-height: 100vh;
-      padding: 20px;
-
-      display: flex;
-      justify-content: center;
-      align-items: center;
-
-      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(145deg, #071525, #101827);
       color: white;
+      padding: 25px 15px;
+    }
 
-      background:
-        radial-gradient(circle at top, #243b55 0%, #141e30 45%, #080b12 100%);
+    .container {
+      width: 100%;
+      max-width: 650px;
+      margin: auto;
+    }
+
+    .header {
+      text-align: center;
+      margin: 25px 0;
+    }
+
+    .header h1 {
+      font-size: 34px;
+      letter-spacing: 2px;
+      color: #00e5ff;
+    }
+
+    .header p {
+      margin-top: 8px;
+      color: #aeb8c5;
+      font-size: 15px;
     }
 
     .card {
-      width: 100%;
-      max-width: 520px;
-
-      padding: 28px;
-
-      border-radius: 24px;
-
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
-
-      box-shadow: 0 25px 70px rgba(0,0,0,0.5);
-
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-    }
-
-    .logo {
-      width: 72px;
-      height: 72px;
-
-      margin: 0 auto 15px;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
       border-radius: 20px;
-
-      background: linear-gradient(135deg, #00c6ff, #0072ff);
-
-      font-size: 34px;
-
-      box-shadow: 0 10px 30px rgba(0,114,255,0.35);
+      padding: 20px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.3);
     }
 
-    h1 {
-      margin: 0;
+    .status {
       text-align: center;
-      font-size: 28px;
+      padding: 15px;
+      color: #00e5ff;
+    }
+
+    .info {
+      display: none;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 14px 5px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .row:last-child {
+      border-bottom: none;
+    }
+
+    .label {
+      color: #9da9b8;
+    }
+
+    .value {
+      text-align: right;
+      color: white;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .ip {
+      font-size: 22px;
+      color: #00e5ff;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 25px;
+      color: #778292;
+      font-size: 13px;
+    }
+
+    .made {
+      margin-top: 8px;
+      color: #00e5ff;
+      font-weight: bold;
       letter-spacing: 1px;
     }
 
-    .subtitle {
-      margin-top: 8px;
-      margin-bottom: 25px;
-
+    .error {
+      color: #ff6b6b;
       text-align: center;
+      line-height: 1.6;
+    }
+  </style>
+</head>
 
-      color: #aeb7c5;
-      font-size: 14px;
+<body>
+
+  <div class="container">
+
+    <div class="header">
+      <h1>DINUU IP INFO</h1>
+      <p>Your Public Network Information</p>
+    </div>
+
+    <div class="card">
+
+      <div id="loading" class="status">
+        Loading your network information...
+      </div>
+
+      <div id="error" class="error"></div>
+
+      <div id="info" class="info">
+
+        <div class="row">
+          <span class="label">IP Address</span>
+          <span class="value ip" id="ip">-</span>
+        </div>
+
+        <div class="row">
+          <span class="label">Country</span>
+          <span class="value" id="country">-</span>
+        </div>
+
+        <div class="row">
+          <span class="label">City</span>
+          <span class="value" id="city">-</span>
+        </div>
+
+        <div class="row">
+          <span class="label">Region</span>
+          <span class="value" id="region">-</span>
+        </div>
+
+        <div class="row">
+          <span class="label">Postal Code</span>
+          <span class="value" id="postal">-</span>
+        </div>
+
+        <div class="row">
+          <span class="label">Timezone</span>
+          <span class="value" id="timezone">-</span>
+        </div>
+
+        <div class="row">
+          <span class="label">Latitude</span>
+          <span class="value" id="latitude">-</span>
+        </div>
+
+        <div class="row">
+          <span class="label">Longitude</span>
+          <span class="value" id="longitude">-</span>
+        </div>
+
+        <div class="row">
+          <span class="label">ASN</span>
+          <span class="value" id="asn">-</span>
+        </div>
+
+        <div class="row">
+          <span class="label">ISP / Organization</span>
+          <span class="value" id="isp">-</span>
+        </div>
+
+        <div class="row">
+          <span class="label">Cloudflare Location</span>
+          <span class="value" id="colo">-</span>
+        </div>
+
+      </div>
+    </div>
+
+    <footer>
+      Information provided by Cloudflare
+      <div class="made">MADE BY DINUU</div>
+    </footer>
+
+  </div>
+
+<script>
+
+const API_URL = "https://ip-info.dinvai34426.workers.dev";
+
+async function loadIPInfo() {
+
+  try {
+
+    const response = await fetch(API_URL);
+
+    if (!response.ok) {
+      throw new Error("API request failed");
     }
 
-    .loading {
-      text-align: center;
-      padding: 30px 10px;
-      color: #aaa;
-    }
+    const data = await response.json();
 
-    .ip-box {
-      margin-bottom: 20px;
-      padding: 18px;
+    document.getElementById("ip").textContent = data.ip || "Unknown";
+    document.getElementById("country").textContent = data.country || "Unknown";
+    document.getElementById("city").textContent = data.city || "Unknown";
+    document.getElementById("region").textContent = data.region || "Unknown";
+    document.getElementById("postal").textContent = data.postal || "Unknown";
+    document.getElementById("timezone").textContent = data.timezone || "Unknown";
+    document.getElementById("latitude").textContent = data.latitude || "Unknown";
+    document.getElementById("longitude").textContent = data.longitude || "Unknown";
+    document.getElementById("asn").textContent = data.asn || "Unknown";
+    document.getElementById("isp").textContent = data.isp || "Unknown";
+    document.getElementById("colo").textContent = data.colo || "Unknown";
 
-      border-radius: 16px;
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("info").style.display = "block";
 
-      text-align: center;
+  } catch (error) {
+
+    document.getElementById("loading").style.display = "none";
+
+    document.getElementById("error").innerHTML =
+      "Unable to load IP information.<br>Please try again later.";
+
+  }
+
+}
+
+loadIPInfo();
+
+</script>
+
+</body>
+                                          </html>
