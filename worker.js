@@ -167,7 +167,7 @@ export default {
         try {
           if (env.IPHUB_API_KEY) {
             const r = await safeFetch(
-              `https://v2.api.iphub.info/v2/${encodeURIComponent(clientIP)}`,
+              `https://v2.api.iphub.info/ip/${encodeURIComponent(clientIP)}`,
               {
                 headers: {
                   "X-Key": env.IPHUB_API_KEY,
@@ -202,16 +202,17 @@ export default {
             env.VPNDETECTION_KEY ||
             "";
 
-          let endpoint =
-            `https://api.vpndetection.io/v1/${encodeURIComponent(clientIP)}`;
+          // Official endpoint is GET https://api.vpndetection.io/{ip}.
+          // Keyless requests are supported on the free allowance.
+          const endpoint =
+            `https://api.vpndetection.io/${encodeURIComponent(clientIP)}`;
 
-          if (apiKey) {
-            endpoint += `?key=${encodeURIComponent(apiKey)}`;
-          }
+          const headers = { "Accept": "application/json" };
 
-          const r = await safeFetch(endpoint, {
-            headers: { "Accept": "application/json" }
-          });
+          // Keep the key server-side. The public API currently works
+          // without a key, so we use the documented keyless endpoint.
+          // This also avoids sending an unsupported query parameter.
+          const r = await safeFetch(endpoint, { headers });
 
           if (r.ok) {
             const d = await r.json();
