@@ -268,7 +268,15 @@ body{
 <aside id="dinuuuSidebar" aria-label="DINUU tools menu">
   <div class="dinu-menu-title">DINUU Tools</div>
 
-  
+  <a class="dinu-menu-btn" href="/vpn-checker.html">
+    <span class="dinu-menu-icon">🛡️</span>
+    <span><b>VPN Checker</b><small>Multi-source VPN detection</small></span>
+  </a>
+
+  <a class="dinu-menu-btn" href="/speed-test.html">
+    <span class="dinu-menu-icon">⚡</span>
+    <span><b>Internet Speed Test</b><small>Download, upload and latency test</small></span>
+  </a>
 
   <a class="dinu-menu-btn" href="/device-info.html">
     <span class="dinu-menu-icon">📱</span>
@@ -316,12 +324,7 @@ body{
     <h1>DINUU IP INFO</h1>
     <p>Your Public Network Information</p>
   </div>
-
-  <div class="menu-row">
-    <button id="vpnBtn" class="menu-btn">🛡️ VPN Checker</button>
-  </div>
-
-  <div class="search-box" id="searchBox">
+<div class="search-box" id="searchBox">
 
     <div class="search-title">
       🔎 Search IP Address
@@ -355,14 +358,7 @@ body{
       Loading your network information...
     </div>
   </div>
-
-  <div class="card vpn-panel" id="vpnPanel">
-    <button id="backBtn" class="back-btn">← Back to IP Info</button>
-    <div class="section-title">VPN Checker</div>
-    <div id="vpnResult">
-      <div class="status">Ready to check your current public IP.</div>
-    </div>
-  </div>
+</div>
 
   <div class="footer">
     Information provided by Cloudflare<br>
@@ -379,11 +375,7 @@ const card = document.getElementById("infoCard");
 const input = document.getElementById("ipInput");
 const searchBtn = document.getElementById("searchBtn");
 const myIpBtn = document.getElementById("myIpBtn");
-const vpnBtn = document.getElementById("vpnBtn");
-const backBtn = document.getElementById("backBtn");
 const searchBox = document.getElementById("searchBox");
-const vpnPanel = document.getElementById("vpnPanel");
-const vpnResult = document.getElementById("vpnResult");
 
 
 function showLoading(text){
@@ -591,57 +583,10 @@ async function searchIP(){
   }
 }
 
-
-async function openVpnChecker(){
-  searchBox.style.display = "none";
-  infoCard.style.display = "none";
-  vpnPanel.style.display = "block";
-  vpnResult.innerHTML = '<div class="status">Checking your IP with 5 VPN detection sources...</div>';
-
-  try{
-    const response = await fetch("/vpn", { cache:"no-store" });
-    const data = await response.json();
-    if(!response.ok || data.error) throw new Error(data.message || "VPN check failed.");
-
-    const verdictClass = data.positive >= 3 ? "source-yes" : data.positive >= 1 ? "source-na" : "source-no";
-    let html = `
-      <div class="vpn-verdict ${verdictClass}">
-        ${data.verdict}
-        <div class="vpn-sub">${data.ip} · ${data.positive}/${data.checked} sources flagged VPN</div>
-      </div>
-      <div class="section-title">Multi-Source Results</div>
-    `;
-
-    Object.values(data.sources).forEach(source => {
-      const cls = source.detected === true ? "source-yes" : source.detected === false ? "source-no" : "source-na";
-      const icon = source.detected === true ? "🔴" : source.detected === false ? "🟢" : "🟡";
-      html += `
-        <div class="source-row">
-          <span class="source-name">${icon} ${source.name}</span>
-          <span class="source-status ${cls}">${source.status}</span>
-        </div>
-      `;
-    });
-
-    vpnResult.innerHTML = html;
-  }catch(error){
-    vpnResult.innerHTML = `<div class="error">${error.message || "VPN check unavailable."}</div>`;
-  }
-}
-
-function closeVpnChecker(){
-  vpnPanel.style.display = "none";
-  searchBox.style.display = "block";
-  infoCard.style.display = "block";
-}
-
 searchBtn.addEventListener(
   "click",
   searchIP
 );
-
-vpnBtn.addEventListener("click", openVpnChecker);
-backBtn.addEventListener("click", closeVpnChecker);
 
 
 myIpBtn.addEventListener(
@@ -665,49 +610,6 @@ input.addEventListener(
 loadMyIP();
 
 </script>
-
-
-
-<section id="extraTools" style="margin:28px 0 10px;">
-  <div style="font-size:24px;font-weight:700;margin-bottom:14px;">More Tools</div>
-
-  <div style="display:grid;gap:12px;">
-
-    <button class="tool-card" data-tool="device" type="button">
-      <span class="tool-icon">📱</span>
-      <span class="tool-copy">
-        <strong>Your Device Info</strong>
-        <small>Device, OS, CPU, memory and online status</small>
-      </span>
-      <span class="tool-arrow">›</span>
-    </button>
-
-    <button class="tool-card" data-tool="browser" type="button">
-      <span class="tool-icon">🌐</span>
-      <span class="tool-copy">
-        <strong>Browser & Screen</strong>
-        <small>Browser, screen size, language and timezone</small>
-      </span>
-      <span class="tool-arrow">›</span>
-    </button>
-
-    <button class="tool-card" data-tool="connection" type="button">
-      <span class="tool-icon">📶</span>
-      <span class="tool-copy">
-        <strong>Connection Info</strong>
-        <small>Online status, network type and browser connection data</small>
-      </span>
-      <span class="tool-arrow">›</span>
-    </button>
-
-  </div>
-
-  <div id="toolPanel" style="display:none;margin-top:14px;padding:18px;border:1px solid rgba(255,255,255,.10);border-radius:18px;background:rgba(255,255,255,.035);">
-    <div id="toolPanelTitle" style="font-size:20px;font-weight:700;margin-bottom:14px;"></div>
-    <div id="toolGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;"></div>
-  </div>
-</section>
-
 <style>
 .tool-card{
   width:100%;
