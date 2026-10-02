@@ -2,15 +2,11 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // IP API
     if (url.pathname === "/api") {
-
       const searchedIP = url.searchParams.get("ip");
 
-      // 🔎 Search for another IP
+      // 🔎 Search another IP
       if (searchedIP) {
-
-        // Basic IP input validation
         if (
           searchedIP.length > 45 ||
           !/^[0-9a-fA-F:.]+$/.test(searchedIP)
@@ -31,18 +27,17 @@ export default {
         }
 
         try {
-          const apiURL =
-            `https://ipapi.co/${encodeURIComponent(searchedIP)}/json/`;
-
-          const response = await fetch(apiURL);
+          const response = await fetch(
+            `https://ipwho.is/${encodeURIComponent(searchedIP)}`
+          );
 
           const data = await response.json();
 
-          if (data.error) {
+          if (!data.success) {
             return new Response(
               JSON.stringify({
                 error: true,
-                message: data.reason || "IP lookup failed"
+                message: data.message || "IP lookup failed"
               }),
               {
                 status: 400,
@@ -61,11 +56,13 @@ export default {
               city: data.city || "Unknown",
               region: data.region || "Unknown",
               postal: data.postal || "Unknown",
-              timezone: data.timezone || "Unknown",
+              timezone: data.timezone?.id || "Unknown",
               latitude: data.latitude ?? "Unknown",
               longitude: data.longitude ?? "Unknown",
-              asn: data.asn || "Unknown",
-              isp: data.org || "Unknown",
+              asn: data.connection?.asn
+                ? `AS${data.connection.asn}`
+                : "Unknown",
+              isp: data.connection?.isp || "Unknown",
               colo: "N/A"
             }),
             {
@@ -77,7 +74,6 @@ export default {
           );
 
         } catch (error) {
-
           return new Response(
             JSON.stringify({
               error: true,
@@ -94,7 +90,7 @@ export default {
         }
       }
 
-      // 🌐 Visitor's own IP
+      // 🌐 Detect visitor's own IP using Cloudflare
       const cf = request.cf || {};
 
       const data = {
@@ -106,23 +102,19 @@ export default {
         timezone: cf.timezone || "Unknown",
         latitude: cf.latitude || "Unknown",
         longitude: cf.longitude || "Unknown",
-        asn: cf.asn || "Unknown",
+        asn: cf.asn ? `AS${cf.asn}` : "Unknown",
         isp: cf.asOrganization || "Unknown",
         colo: cf.colo || "Unknown"
       };
 
-      return new Response(
-        JSON.stringify(data),
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"
-          }
+      return new Response(JSON.stringify(data), {
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
         }
-      );
+      });
     }
 
-    // Website
     return env.ASSETS.fetch(request);
   }
 };
