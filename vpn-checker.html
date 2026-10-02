@@ -5,25 +5,87 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VPN Checker - DINUU IP INFO</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#080d18;color:#eef2ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
-.wrap{max-width:760px;margin:auto;padding:28px 18px 50px}a{color:#67e8f9;text-decoration:none}
+*{box-sizing:border-box}
+body{margin:0;background:#080d18;color:#eef2ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+.wrap{max-width:820px;margin:auto;padding:28px 18px 50px}
+a{color:#67e8f9;text-decoration:none}
 .back{display:inline-block;margin-bottom:24px;padding:10px 14px;border:1px solid #263247;border-radius:12px;background:#111a2a}
 .card{padding:22px;border:1px solid #263247;border-radius:20px;background:#101827;box-shadow:0 12px 40px rgba(0,0,0,.18)}
 h1{margin:0 0 8px;font-size:28px}.sub{opacity:.65;margin-bottom:22px}
-button{border:0;border-radius:13px;padding:13px 18px;background:#16d5ed;color:#061018;font-weight:700;cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:18px}
+button{border:0;border-radius:13px;padding:13px 18px;background:#16d5ed;color:#061018;font-weight:700;cursor:pointer;width:100%}
+button:disabled{opacity:.55}
+.status{font-size:22px;font-weight:800;margin:20px 0;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .item{padding:13px;border-radius:12px;background:#0b1321;border:1px solid #202c40}
 .label{font-size:12px;opacity:.6;margin-bottom:5px}.value{font-weight:650;word-break:break-word}
-.status{font-size:20px;font-weight:800;margin-top:18px}
+.ok{color:#00ff9d}.bad{color:#ff6b6b}.wait{color:#f0c36b}
+.small{font-size:12px;opacity:.55;margin-top:16px;line-height:1.5;text-align:center}
 </style>
 </head>
-<body><main class="wrap">
+<body>
+<main class="wrap">
 <a class="back" href="/">← Back to IP Info</a>
 <div class="card">
 <h1>🛡️ VPN Checker</h1>
-<div class="sub">Multi-source VPN detection.</div>
-<p style="opacity:.7">Use the VPN Checker from the main site. This page is reserved for the multi-source checker.</p>
+<div class="sub">10-source VPN detection</div>
+<button id="check">Check My VPN</button>
+<div id="status" class="status">Ready</div>
+<div id="grid" class="grid"></div>
+<div class="small">Only explicit VPN signals count. Hosting/datacenter or proxy alone is not treated as a VPN.</div>
 </div>
 </main>
+<script>
+const btn=document.getElementById('check');
+const status=document.getElementById('status');
+const grid=document.getElementById('grid');
 
-</body></html>
+function esc(v){
+  return String(v??'—').replace(/[&<>\"']/g,m=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
+function row(name,value,cls=''){
+  return `<div class="item"><div class="label">${esc(name)}</div><div class="value ${cls}">${esc(value)}</div></div>`;
+}
+
+btn.onclick=async()=>{
+  btn.disabled=true;
+  status.textContent='Checking 10 sources…';
+  status.className='status wait';
+  grid.innerHTML='';
+  try{
+    const r=await fetch('/api?vpn=1',{cache:'no-store'});
+    const d=await r.json();
+    if(!r.ok||d.error) throw new Error(d.message||'VPN check failed');
+
+    if(d.status==='detected'){
+      status.textContent='🔴 VPN Detected';
+      status.className='status bad';
+    }else if(d.status==='possible'){
+      status.textContent='🟡 Possible VPN';
+      status.className='status wait';
+    }else{
+      status.textContent='🟢 No VPN Detected';
+      status.className='status ok';
+    }
+
+    grid.innerHTML=
+      row('IP',d.ip)+
+      row('VPN Signals',`${d.detected_sources}/${d.checked_sources} checked sources`)+
+      row('Sources Checked',`${d.checked_sources}/${d.total_sources}`)+
+      Object.values(d.sources||{}).map(s=>{
+        const cls=s.detected===true?'bad':s.detected===false?'ok':'wait';
+        const icon=s.detected===true?'🔴':s.detected===false?'🟢':'🟡';
+        return row(icon+' '+s.name,s.status,cls);
+      }).join('')+
+      row('Signals',d.signals?.join(' • ')||'None');
+  }catch(e){
+    status.textContent=e.message||'VPN check unavailable';
+    status.className='status bad';
+  }
+  btn.disabled=false;
+};
+</script>
+</body>
+</html>
