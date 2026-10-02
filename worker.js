@@ -27,7 +27,7 @@ export default {
         }
 
         try {
-          // 🌐 IP99 lookup
+          // 🌐 IP99
           const response = await fetch(
             `https://ip99.com/v1/ip/${encodeURIComponent(searchedIP)}`,
             {
@@ -62,7 +62,7 @@ export default {
           // 🔢 ASN
           const asnNumber = data.network?.asn;
 
-          // 🏢 ISP / Organization from ASN
+          // 🏢 ISP
           let isp = "Unknown";
 
           if (asnNumber) {
@@ -86,33 +86,38 @@ export default {
             }
           }
 
-          // 📮 Postal Code fallback
+          // 📮 Postal Code
           let postal = "Unknown";
 
-          // First try IP99
-          if (data.geo?.postal_code) {
-            postal = data.geo.postal_code;
-          } else if (data.geo?.postal) {
-            postal = data.geo.postal;
-          }
+          // First: IP99
+          postal =
+            data.geo?.postal_code ||
+            data.geo?.postal ||
+            "Unknown";
 
-          // If IP99 doesn't provide postal code,
-          // use HackMyIP
+          // Fallback: HackMyIP
           if (postal === "Unknown") {
             try {
-              const postalResponse = await fetch(
+              const hackResponse = await fetch(
                 `https://hackmyip.com/api/lookup?ip=${encodeURIComponent(
                   searchedIP
                 )}`
               );
 
-              if (postalResponse.ok) {
-                const postalData = await postalResponse.json();
+              if (hackResponse.ok) {
+                const hackResult = await hackResponse.json();
 
                 postal =
-                  postalData?.location?.postal_code ||
-                  postalData?.postal_code ||
+                  hackResult?.data?.location?.postal_code ||
                   "Unknown";
+
+                // If LookIP failed, use HackMyIP ISP
+                if (isp === "Unknown") {
+                  isp =
+                    hackResult?.data?.network?.isp ||
+                    hackResult?.data?.network?.org ||
+                    "Unknown";
+                }
               }
             } catch {
               postal = "Unknown";
@@ -156,7 +161,6 @@ export default {
 
             isp: isp,
 
-            // External IP searches cannot show Cloudflare colo
             colo: "N/A"
           };
 
