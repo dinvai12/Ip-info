@@ -598,5 +598,86 @@ loadMyIP();
   <div style="margin-top:14px;font-size:12px;">© 2026 DINUU IP INFO</div>
 </footer>
 
+
+<section id="deviceInfoSection" style="margin:28px 0;">
+  <button id="deviceInfoToggle" type="button"
+    style="width:100%;padding:16px 18px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.04);color:inherit;cursor:pointer;font-size:17px;font-weight:600;text-align:left;">
+    📱 Your Device Info <span style="float:right;">＋</span>
+  </button>
+
+  <div id="deviceInfoPanel" style="display:none;margin-top:12px;padding:18px;border:1px solid rgba(255,255,255,.10);border-radius:16px;background:rgba(255,255,255,.025);">
+    <div id="deviceInfoGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;"></div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const toggle = document.getElementById("deviceInfoToggle");
+  const panel = document.getElementById("deviceInfoPanel");
+  const grid = document.getElementById("deviceInfoGrid");
+
+  if (!toggle || !panel || !grid) return;
+
+  let loaded = false;
+
+  const esc = (value) =>
+    String(value ?? "Unavailable").replace(/[&<>"']/g, c => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    }[c]));
+
+  function addRow(label, value) {
+    const item = document.createElement("div");
+    item.style.cssText =
+      "padding:12px;border-radius:10px;background:rgba(255,255,255,.04);";
+    item.innerHTML =
+      '<div style="font-size:12px;opacity:.65;margin-bottom:4px;">' +
+      esc(label) +
+      '</div><div style="font-weight:500;word-break:break-word;">' +
+      esc(value) +
+      "</div>";
+    grid.appendChild(item);
+  }
+
+  toggle.addEventListener("click", () => {
+    const isOpen = panel.style.display !== "none";
+    panel.style.display = isOpen ? "none" : "block";
+    toggle.querySelector("span").textContent = isOpen ? "＋" : "−";
+
+    // Device information is collected only when the user opens this panel.
+    if (loaded || isOpen) {
+      if (loaded) return;
+      loaded = true;
+
+      const ua = navigator.userAgent || "Unavailable";
+      const platform = navigator.platform || "Unavailable";
+      const screenSize = `${screen.width} × ${screen.height}`;
+      const viewport = `${window.innerWidth} × ${window.innerHeight}`;
+      const dpr = window.devicePixelRatio || "Unavailable";
+      const language = navigator.language || "Unavailable";
+      const timezone =
+        Intl.DateTimeFormat().resolvedOptions().timeZone || "Unavailable";
+      const online = navigator.onLine ? "Online" : "Offline";
+      const cores = navigator.hardwareConcurrency
+        ? `${navigator.hardwareConcurrency} cores`
+        : "Unavailable";
+      const memory = navigator.deviceMemory
+        ? `${navigator.deviceMemory} GB`
+        : "Unavailable";
+
+      addRow("Browser / User Agent", ua);
+      addRow("Platform / OS", platform);
+      addRow("Screen Resolution", screenSize);
+      addRow("Viewport", viewport);
+      addRow("Device Pixel Ratio", dpr);
+      addRow("Language", language);
+      addRow("Timezone", timezone);
+      addRow("Online Status", online);
+      addRow("CPU Cores", cores);
+      addRow("Device Memory", memory);
+    }
+  });
+})();
+</script>
+
 </body>
   </html>
