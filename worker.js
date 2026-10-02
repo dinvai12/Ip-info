@@ -59,10 +59,10 @@ export default {
             );
           }
 
-          // 🔢 Get ASN
+          // 🔢 ASN
           const asnNumber = data.network?.asn;
 
-          // 🏢 Get ISP / Organization from ASN
+          // 🏢 ISP / Organization from ASN
           let isp = "Unknown";
 
           if (asnNumber) {
@@ -86,6 +86,40 @@ export default {
             }
           }
 
+          // 📮 Postal Code fallback
+          let postal = "Unknown";
+
+          // First try IP99
+          if (data.geo?.postal_code) {
+            postal = data.geo.postal_code;
+          } else if (data.geo?.postal) {
+            postal = data.geo.postal;
+          }
+
+          // If IP99 doesn't provide postal code,
+          // use HackMyIP
+          if (postal === "Unknown") {
+            try {
+              const postalResponse = await fetch(
+                `https://hackmyip.com/api/lookup?ip=${encodeURIComponent(
+                  searchedIP
+                )}`
+              );
+
+              if (postalResponse.ok) {
+                const postalData = await postalResponse.json();
+
+                postal =
+                  postalData?.location?.postal_code ||
+                  postalData?.postal_code ||
+                  "Unknown";
+              }
+            } catch {
+              postal = "Unknown";
+            }
+          }
+
+          // 📦 Final result
           const result = {
             ip: data.ip || searchedIP,
 
@@ -98,19 +132,22 @@ export default {
             region:
               data.geo?.region || "Unknown",
 
-            postal:
-              data.geo?.postal_code ||
-              data.geo?.postal ||
-              "Unknown",
+            postal: postal,
 
             timezone:
-              data.geo?.tz || "Unknown",
+              data.geo?.tz ||
+              data.geo?.timezone ||
+              "Unknown",
 
             latitude:
-              data.geo?.lat ?? "Unknown",
+              data.geo?.lat ??
+              data.geo?.latitude ??
+              "Unknown",
 
             longitude:
-              data.geo?.lon ?? "Unknown",
+              data.geo?.lon ??
+              data.geo?.longitude ??
+              "Unknown",
 
             asn:
               asnNumber != null
@@ -119,6 +156,7 @@ export default {
 
             isp: isp,
 
+            // External IP searches cannot show Cloudflare colo
             colo: "N/A"
           };
 
