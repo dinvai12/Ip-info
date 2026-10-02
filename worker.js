@@ -28,21 +28,48 @@ export default {
 
         try {
           const response = await fetch(
-            `https://ip99.com/v1/ip/${encodeURIComponent(searchedIP)}`
+            `https://ip99.com/v1/ip/${encodeURIComponent(searchedIP)}`,
+            {
+              headers: {
+                "X-API-Key": env.IP99_API_KEY,
+                "Accept": "application/json"
+              }
+            }
           );
 
-          const data = await response.json();
+          const text = await response.text();
 
-          if (!response.ok || data.error) {
+          let data;
+
+          try {
+            data = JSON.parse(text);
+          } catch {
+            return new Response(
+              JSON.stringify({
+                error: true,
+                message: "Invalid response from IP99"
+              }),
+              {
+                status: 502,
+                headers: {
+                  "Content-Type": "application/json",
+                  "Access-Control-Allow-Origin": "*"
+                }
+              }
+            );
+          }
+
+          if (!response.ok) {
             return new Response(
               JSON.stringify({
                 error: true,
                 message:
-                  data.error?.message ||
-                  `IP lookup failed (${response.status})`
+                  data.message ||
+                  data.error ||
+                  `IP99 error ${response.status}`
               }),
               {
-                status: response.status || 502,
+                status: response.status,
                 headers: {
                   "Content-Type": "application/json",
                   "Access-Control-Allow-Origin": "*"
@@ -56,43 +83,55 @@ export default {
 
             country:
               data.geo?.country ||
+              data.country ||
               "Unknown",
 
             city:
               data.geo?.city ||
+              data.city ||
               "Unknown",
 
             region:
               data.geo?.region ||
+              data.region ||
               "Unknown",
 
             postal:
               data.geo?.postal_code ||
               data.geo?.postal ||
+              data.postal_code ||
               "Unknown",
 
             timezone:
-              data.geo?.tz ||
               data.geo?.timezone ||
+              data.geo?.tz ||
+              data.timezone ||
               "Unknown",
 
             latitude:
+              data.geo?.latitude ??
               data.geo?.lat ??
+              data.latitude ??
               "Unknown",
 
             longitude:
+              data.geo?.longitude ??
               data.geo?.lon ??
+              data.longitude ??
               "Unknown",
 
             asn:
               data.network?.asn
                 ? `AS${data.network.asn}`
-                : "Unknown",
+                : data.asn
+                  ? `AS${data.asn}`
+                  : "Unknown",
 
             isp:
               data.network?.organization ||
               data.network?.org ||
-              data.network?.asn_org ||
+              data.organization ||
+              data.org ||
               "Unknown",
 
             colo: "N/A"
