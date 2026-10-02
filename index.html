@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>DINUU IP INFO</title>
-  <meta name="description" content="Check your public IP address, location, ASN and network information with DINUU IP INFO.">
+  <meta name="description" content="Check IP address, location, ASN and network information with DINUU IP INFO.">
 
   <style>
     * {
@@ -31,7 +31,7 @@
 
     .header {
       text-align: center;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
 
     .header h1 {
@@ -46,6 +46,77 @@
       color: #aeb7c7;
       font-size: 14px;
     }
+
+    /* SEARCH */
+
+    .search-box {
+      background: rgba(18, 24, 38, 0.78);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 18px;
+      padding: 15px;
+      margin-bottom: 18px;
+      backdrop-filter: blur(15px);
+      box-shadow: 0 15px 45px rgba(0,0,0,.25);
+    }
+
+    .search-title {
+      color: #00e5ff;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 0;
+      background: rgba(0,0,0,.25);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      padding: 12px;
+      color: #fff;
+      outline: none;
+      font-size: 14px;
+    }
+
+    .search-input:focus {
+      border-color: #00e5ff;
+      box-shadow: 0 0 10px rgba(0,229,255,.15);
+    }
+
+    .search-input::placeholder {
+      color: #788296;
+    }
+
+    .search-btn {
+      border: none;
+      border-radius: 10px;
+      padding: 0 18px;
+      background: #00e5ff;
+      color: #061018;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .search-btn:active {
+      transform: scale(.97);
+    }
+
+    .clear-btn {
+      display: none;
+      margin-top: 9px;
+      background: transparent;
+      border: none;
+      color: #8e9aad;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* MAIN CARD */
 
     .card {
       background: rgba(18, 24, 38, 0.78);
@@ -134,12 +205,21 @@
     }
 
     @media (max-width: 500px) {
+
       .header h1 {
         font-size: 28px;
       }
 
       .card {
         padding: 15px;
+      }
+
+      .search-row {
+        gap: 6px;
+      }
+
+      .search-btn {
+        padding: 0 14px;
       }
 
       .row {
@@ -163,125 +243,34 @@
       <p>Your Public Network Information</p>
     </div>
 
-    <div class="card" id="infoCard">
 
-      <div class="status" id="status">
-        Loading your network information...
+    <!-- IP SEARCH -->
+
+    <div class="search-box">
+
+      <div class="search-title">
+        🔎 Search IP Address
       </div>
 
-    </div>
+      <div class="search-row">
 
-    <div class="footer">
-      Information provided by Cloudflare<br>
-      <span class="made">MADE BY DINUU</span>
-    </div>
+        <input
+          type="text"
+          id="ipInput"
+          class="search-input"
+          placeholder="Enter IP address..."
+          autocomplete="off"
+        >
 
-  </div>
+        <button
+          class="search-btn"
+          onclick="searchIP()"
+        >
+          Search
+        </button>
 
-  <script>
-    const API_URL = "/api";
+      </div>
 
-    async function loadIPInfo() {
-      const card = document.getElementById("infoCard");
-
-      try {
-        const response = await fetch(API_URL);
-
-        if (!response.ok) {
-          throw new Error("API request failed");
-        }
-
-        const data = await response.json();
-
-        card.innerHTML = `
-
-          <div class="section-title">
-            IP Information
-          </div>
-
-          <div class="row">
-            <span class="label">IP Address</span>
-            <span class="value ip">${data.ip || "Unknown"}</span>
-          </div>
-
-          <div class="row">
-            <span class="label">Country</span>
-            <span class="value">${data.country || "Unknown"}</span>
-          </div>
-
-          <div class="row">
-            <span class="label">City</span>
-            <span class="value">${data.city || "Unknown"}</span>
-          </div>
-
-          <div class="row">
-            <span class="label">Region</span>
-            <span class="value">${data.region || "Unknown"}</span>
-          </div>
-
-          <div class="row">
-            <span class="label">Postal Code</span>
-            <span class="value">${data.postal || "Unknown"}</span>
-          </div>
-
-          <div class="row">
-            <span class="label">Timezone</span>
-            <span class="value">${data.timezone || "Unknown"}</span>
-          </div>
-
-          <div class="row">
-            <span class="label">Latitude</span>
-            <span class="value">${data.latitude || "Unknown"}</span>
-          </div>
-
-          <div class="row">
-            <span class="label">Longitude</span>
-            <span class="value">${data.longitude || "Unknown"}</span>
-          </div>
-
-
-          <div class="section-title">
-            Network / ASN Details
-          </div>
-
-          <div class="row">
-            <span class="label">ASN</span>
-            <span class="value asn">
-              ${data.asn ? "AS" + data.asn : "Unknown"}
-            </span>
-          </div>
-
-          <div class="row">
-            <span class="label">Network / Organization</span>
-            <span class="value">
-              ${data.isp || "Unknown"}
-            </span>
-          </div>
-
-          <div class="row">
-            <span class="label">Cloudflare Location</span>
-            <span class="value">
-              ${data.colo || "Unknown"}
-            </span>
-          </div>
-
-        `;
-
-      } catch (error) {
-
-        card.innerHTML = `
-          <div class="error">
-            Unable to load network information.<br>
-            Please refresh the page and try again.
-          </div>
-        `;
-
-        console.error(error);
-      }
-    }
-
-    loadIPInfo();
-  </script>
-
-</body>
-    </html>
+      <button
+        id="clearBtn"
+        class="
