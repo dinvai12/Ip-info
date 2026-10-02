@@ -11,11 +11,6 @@ export default {
       }
     });
 
-    const validIP = ip =>
-      typeof ip === "string" &&
-      ip.length <= 45 &&
-      /^[0-9a-fA-F:.]+$/.test(ip);
-
     const safeFetch = async (input, init = {}, timeout = 5000) => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeout);
@@ -35,248 +30,224 @@ export default {
         request.headers.get("CF-Connecting-IP") ||
         "Unknown";
 
-      if (!validIP(clientIP)) {
+      if (
+        clientIP === "Unknown" ||
+        clientIP.length > 45 ||
+        !/^[0-9a-fA-F:.]+$/.test(clientIP)
+      ) {
         return json({ error: true, message: "Invalid IP address" }, 400);
       }
 
-      // 🛡️ 10-source VPN checker.
-      // Only explicit VPN signals count. Hosting/datacenter/proxy alone
-      // is not counted as VPN.
       if (vpnCheck) {
-        const sources = {
-          iphub: { name: "IPHub", detected: null, status: "Unavailable" },
-          iplogs: { name: "IPLogs", detected: null, status: "Unavailable" },
-          ip99: { name: "IP99", detected: null, status: "Unavailable" },
-          hackmyip: { name: "HackMyIP", detected: null, status: "Unavailable" },
-          proxycheck: { name: "ProxyCheck.io", detected: null, status: "Unavailable" },
-          ipqs: { name: "IPQualityScore", detected: null, status: "Unavailable" },
-          vpnapi: { name: "VPNAPI.io", detected: null, status: "Unavailable" },
-          scamalytics: { name: "Scamalytics", detected: null, status: "Unavailable" },
-          ipinfo: { name: "IPinfo Privacy", detected: null, status: "Unavailable" },
-          ip2proxy: { name: "IP2Location/IP2Proxy", detected: null, status: "Unavailable" },
-          getipintel: { name: "GetIPIntel", detected: null, status: "Unavailable" }
+        const results = {
+          iplogs: "Unavailable",
+          ip99: "Unavailable",
+          vpnapi: "Unavailable",
+          scamalytics: "Unavailable",
+          iphub: "Unavailable",
+          vpndetection: "Unavailable"
         };
 
         const signals = [];
+        let detected = 0;
+        let checked = 0;
 
-        const setSource = (key, yes, detail = "") => {
-          sources[key].detected = !!yes;
-          sources[key].status = yes ? "VPN" : "No VPN";
-          if (yes) signals.push(`${sources[key].name}: VPN${detail ? " (" + detail + ")" : ""}`);
-        };
-
-        const jobs = [];
-
-        // 1) IPHub — free Basic API key. We count only explicit VPN signals.
-        // block=1 can also mean hosting/proxy/Tor, so it is NOT enough by itself.
-        jobs.push((async () => {
-          if (!env.IPHUB_API_KEY) return;
-          try {
-            const r = await safeFetch(`https://v2.api.iphub.info/ip/${encodeURIComponent(clientIP)}`, {
-              headers: {
-                "X-Key": env.IPHUB_API_KEY,
-                "Accept": "application/json",
-                "Accept-Version": "2.2"
-              }
-            });
-            if (!r.ok) return;
+        // 1. IPLogs
+        try {
+          const r = await safeFetch("https://iplogs.com/v1/check", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify({ ip: clientIP })
+          });
+          if (r.ok) {
             const d = await r.json();
-            const reason = String(d?.blockReason || "").toLowerCase();
-            const pt = d?.proxyType || {};
-            const yes = pt?.vpn === true || /\bvpn\b/.test(reason);
-            const explicitNo = d?.block === 0 || (pt && Object.values(pt).every(v => v === false));
-            if (yes) setSource("iphub", true, d?.blockReason || "");
-            else if (explicitNo) setSource("iphub", false);
-          } catch {}
-        })());
-
-        // 2) IPLogs — free/no key.
-        jobs.push((async () => {
-          try {
-            const r = await safeFetch("https://iplogs.com/v1/check", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Accept": "application/json" },
-              body: JSON.stringify({ ip: clientIP })
-            });
-            if (!r.ok) return;
-            const d = await r.json();
-            const yes = d?.is_vpn === true;
-            setSource("iplogs", yes, d?.verdict || "");
-          } catch {}
-        })());
-
-        // 3) IP99 — existing secret is optional.
-        jobs.push((async () => {
-          try {
-            const headers = { "Accept": "application/json" };
-            if (env.IP99_API_KEY) headers["X-API-Key"] = env.IP99_API_KEY;
-            const r = await safeFetch(`https://ip99.com/v1/ip/${encodeURIComponent(clientIP)}`, { headers });
-            if (!r.ok) return;
-            const d = await r.json();
-            const rs = Array.isArray(d?.risk?.signals) ? d.risk.signals : [];
-            setSource("ip99", rs.includes("vpn"));
-          } catch {}
-        })());
-
-        // 4) HackMyIP — explicit VPN field only.
-        jobs.push((async () => {
-          try {
-            const r = await safeFetch(`https://hackmyip.com/api/lookup?ip=${encodeURIComponent(clientIP)}`);
-            if (!r.ok) return;
-            const d = await r.json();
-            const p = d?.data?.privacy || {};
-            if (typeof p.is_vpn === "boolean") setSource("hackmyip", p.is_vpn);
-          } catch {}
-        })());
-
-        // 5) ProxyCheck.io — v3. If a key is not configured, it uses its
-        // public/free allowance. We inspect only the VPN detection flag.
-        jobs.push((async () => {
-          try {
-            const key = env.PROXYCHECK_API_KEY;
-            const qs = key
-              ? `?vpn=2&key=${encodeURIComponent(key)}`
-              : `?vpn=2`;
-            const r = await safeFetch(`https://proxycheck.io/v2/${encodeURIComponent(clientIP)}${qs}`);
-            if (!r.ok) return;
-            const d = await r.json();
-            const row = d?.[clientIP];
-            const type = String(row?.type || "").toUpperCase();
-            if (type === "VPN") setSource("proxycheck", true);
-            else if (row && (row?.type === "Clean" || row?.type === "Residential")) setSource("proxycheck", false);
-          } catch {}
-        })());
-
-        // 6) IPQualityScore — API key required.
-        jobs.push((async () => {
-          if (!env.IPQS_API_KEY) return;
-          try {
-            const r = await safeFetch(
-              `https://ipqualityscore.com/api/json/ip/${encodeURIComponent(env.IPQS_API_KEY)}/${encodeURIComponent(clientIP)}`
-            );
-            if (!r.ok) return;
-            const d = await r.json();
-            if (typeof d?.vpn === "boolean") setSource("ipqs", d.vpn);
-          } catch {}
-        })());
-
-        // 7) VPNAPI.io — API key required.
-        jobs.push((async () => {
-          if (!env.VPNAPI_KEY) return;
-          try {
-            const r = await safeFetch(
-              `https://vpnapi.io/api/${encodeURIComponent(clientIP)}?key=${encodeURIComponent(env.VPNAPI_KEY)}`
-            );
-            if (!r.ok) return;
-            const d = await r.json();
-            if (typeof d?.security?.vpn === "boolean") setSource("vpnapi", d.security.vpn);
-          } catch {}
-        })());
-
-        // 8) Scamalytics — username + API key required.
-        // The account is tied to the node selected at signup. If no
-        // SCAMALYTICS_API_BASE secret is set, try both documented nodes and
-        // use the first successful response.
-        jobs.push((async () => {
-          if (!env.SCAMALYTICS_USERNAME || !env.SCAMALYTICS_API_KEY) return;
-
-          const configured = env.SCAMALYTICS_API_BASE
-            ? [env.SCAMALYTICS_API_BASE]
-            : [
-                "https://api12.scamalytics.com/v3/",
-                "https://api11.scamalytics.com/v3/"
-              ];
-
-          for (const base of configured) {
-            try {
-              const endpoint =
-                `${base.replace(/\/?$/, "/")}` +
-                `${encodeURIComponent(env.SCAMALYTICS_USERNAME)}` +
-                `?key=${encodeURIComponent(env.SCAMALYTICS_API_KEY)}` +
-                `&ip=${encodeURIComponent(clientIP)}`;
-
-              const r = await safeFetch(endpoint, {}, 6000);
-              if (!r.ok) continue;
-
-              const d = await r.json();
-              const s = d?.scamalytics;
-
-              // HTTP 200 can still contain an application-level error.
-              if (s?.status !== "ok") continue;
-
-              const yes = s?.scamalytics_proxy?.is_vpn === true;
-              if (typeof yes === "boolean") {
-                setSource("scamalytics", yes);
-                break;
-              }
-            } catch {}
+            const yes =
+              d.is_vpn === true ||
+              d.verdict === "vpn_detected" ||
+              d.verdict === "vpn_likely";
+            results.iplogs = yes ? "VPN" : "No VPN";
+            checked++;
+            if (yes) {
+              detected++;
+              signals.push("IPLogs: VPN");
+            }
           }
-        })());
+        } catch {}
 
-        // 9) IPinfo Privacy — token required and privacy detection access required.
-        jobs.push((async () => {
-          if (!env.IPINFO_TOKEN) return;
-          try {
-            const r = await safeFetch(
-              `https://ipinfo.io/${encodeURIComponent(clientIP)}/privacy?token=${encodeURIComponent(env.IPINFO_TOKEN)}`
-            );
-            if (!r.ok) return;
+        // 2. IP99
+        try {
+          const headers = { "Accept": "application/json" };
+          if (env.IP99_API_KEY) headers["X-API-Key"] = env.IP99_API_KEY;
+          const r = await safeFetch(
+            `https://ip99.com/v1/ip/${encodeURIComponent(clientIP)}`,
+            { headers }
+          );
+          if (r.ok) {
             const d = await r.json();
-            if (typeof d?.vpn === "boolean") setSource("ipinfo", d.vpn);
-          } catch {}
-        })());
+            const rs = Array.isArray(d.risk?.signals) ? d.risk.signals : [];
+            const yes = rs.some(s => String(s).toLowerCase() === "vpn");
+            results.ip99 = yes ? "VPN" : "No VPN";
+            checked++;
+            if (yes) {
+              detected++;
+              signals.push("IP99: VPN");
+            }
+          }
+        } catch {}
 
-        // 10) IP2Proxy/IP2Location — key required. IP2Proxy web-service response
-        // commonly exposes proxyType; only explicit VPN values count.
-        jobs.push((async () => {
-          if (!env.IP2PROXY_API_KEY) return;
-          try {
+        // 3. VPNAPI.io
+        try {
+          if (env.VPNAPI_KEY) {
             const r = await safeFetch(
-              `https://api.ip2proxy.com/?key=${encodeURIComponent(env.IP2PROXY_API_KEY)}&ip=${encodeURIComponent(clientIP)}&format=json`
+              `https://vpnapi.io/api/${encodeURIComponent(clientIP)}?key=${encodeURIComponent(env.VPNAPI_KEY)}`,
+              { headers: { "Accept": "application/json" } }
             );
-            if (!r.ok) return;
+            if (r.ok) {
+              const d = await r.json();
+              const yes = d?.security?.vpn === true;
+              results.vpnapi = yes ? "VPN" : "No VPN";
+              checked++;
+              if (yes) {
+                detected++;
+                signals.push("VPNAPI.io: VPN");
+              }
+            }
+          }
+        } catch {}
+
+        // 4. Scamalytics
+        try {
+          if (env.SCAMALYTICS_USERNAME && env.SCAMALYTICS_API_KEY) {
+            const bases = env.SCAMALYTICS_API_BASE
+              ? [env.SCAMALYTICS_API_BASE]
+              : [
+                  "https://api12.scamalytics.com/v3/",
+                  "https://api11.scamalytics.com/v3/"
+                ];
+
+            for (const base of bases) {
+              try {
+                const endpoint =
+                  base.replace(/\/+$/, "") +
+                  "/" + encodeURIComponent(env.SCAMALYTICS_USERNAME) +
+                  "?key=" + encodeURIComponent(env.SCAMALYTICS_API_KEY) +
+                  "&ip=" + encodeURIComponent(clientIP);
+
+                const r = await safeFetch(endpoint, {
+                  headers: { "Accept": "application/json" }
+                });
+
+                if (!r.ok) continue;
+
+                const d = await r.json();
+
+                if (d?.scamalytics?.status !== "ok") continue;
+
+                const yes =
+                  d?.scamalytics?.scamalytics_proxy?.is_vpn === true;
+
+                results.scamalytics = yes ? "VPN" : "No VPN";
+                checked++;
+
+                if (yes) {
+                  detected++;
+                  signals.push("Scamalytics: VPN");
+                }
+
+                break;
+              } catch {}
+            }
+          }
+        } catch {}
+
+        // 5. IPHub
+        try {
+          if (env.IPHUB_API_KEY) {
+            const r = await safeFetch(
+              `https://v2.api.iphub.info/v2/${encodeURIComponent(clientIP)}`,
+              {
+                headers: {
+                  "X-Key": env.IPHUB_API_KEY,
+                  "Accept": "application/json"
+                }
+              }
+            );
+
+            if (r.ok) {
+              const d = await r.json();
+
+              // IPHub block values:
+              // 0 = residential, 1 = hosting/server, 2 = non-residential proxy/VPN/Tor.
+              // Only block 2 is treated as a VPN signal here.
+              const yes = Number(d?.block) === 2;
+
+              results.iphub = yes ? "VPN" : "No VPN";
+              checked++;
+
+              if (yes) {
+                detected++;
+                signals.push("IPHub: VPN/Proxy/Tor");
+              }
+            }
+          }
+        } catch {}
+
+        // 6. VPNDetection.io
+        try {
+          const apiKey =
+            env.VPNDETECTION_API_KEY ||
+            env.VPNDETECTION_KEY ||
+            "";
+
+          let endpoint =
+            `https://api.vpndetection.io/v1/${encodeURIComponent(clientIP)}`;
+
+          if (apiKey) {
+            endpoint += `?key=${encodeURIComponent(apiKey)}`;
+          }
+
+          const r = await safeFetch(endpoint, {
+            headers: { "Accept": "application/json" }
+          });
+
+          if (r.ok) {
             const d = await r.json();
-            const t = String(d?.proxyType || d?.proxy_type || "").toUpperCase();
-            if (t) setSource("ip2proxy", ["VPN", "VPN-ANONYMOUS", "VPN-RESIDENTIAL"].includes(t));
-          } catch {}
-        })());
 
-        // 11) GetIPIntel — contact/email required. Its response is a
-        // probability, not a boolean, so >= 0.99 is treated as a strong signal.
-        jobs.push((async () => {
-          if (!env.GETIPINTEL_CONTACT) return;
-          try {
-            const r = await safeFetch(
-              `https://check.getipintel.net/check.php?ip=${encodeURIComponent(clientIP)}&contact=${encodeURIComponent(env.GETIPINTEL_CONTACT)}&flags=m`
-            );
-            if (!r.ok) return;
-            const raw = (await r.text()).trim();
-            const n = Number(raw);
-            if (Number.isFinite(n)) setSource("getipintel", n >= 0.99, `score ${n.toFixed(3)}`);
-          } catch {}
-        })());
+            const yes =
+              d?.is_vpn === true ||
+              d?.vpn === true ||
+              d?.data?.is_vpn === true ||
+              d?.data?.vpn === true;
 
-        await Promise.allSettled(jobs);
+            results.vpndetection = yes ? "VPN" : "No VPN";
+            checked++;
 
-        const checked = Object.values(sources).filter(s => s.detected !== null);
-        const positive = checked.filter(s => s.detected === true).length;
+            if (yes) {
+              detected++;
+              signals.push("VPNDetection.io: VPN");
+            }
+          }
+        } catch {}
 
         let status = "clean";
-        if (positive >= 2) status = "detected";
-        else if (positive === 1) status = "possible";
+        if (detected >= 2) status = "detected";
+        else if (detected === 1) status = "possible";
 
         return json({
           ip: clientIP,
           status,
-          detected_sources: positive,
-          checked_sources: checked.length,
-          total_sources: 11,
-          sources,
+          detected_sources: detected,
+          checked_sources: checked,
+          total_sources: 6,
+          sources: results,
           signals
         });
       }
 
-      // 🔎 Search another IP — preserve the existing IP-info behavior.
+      // IP lookup
       if (searchedIP) {
         try {
           const response = await safeFetch(
@@ -294,7 +265,7 @@ export default {
           if (!response.ok) {
             return json({
               error: true,
-              message: data?.error?.message || data?.message || `IP99 error ${response.status}`
+              message: data.message || data.error || `IP99 error ${response.status}`
             }, response.status);
           }
 
@@ -308,12 +279,20 @@ export default {
               );
               if (asnResponse.ok) {
                 const asnData = await asnResponse.json();
-                isp = asnData.name || asnData.organization || asnData.orgName || asnData.org || "Unknown";
+                isp =
+                  asnData.name ||
+                  asnData.organization ||
+                  asnData.orgName ||
+                  asnData.org ||
+                  "Unknown";
               }
             } catch {}
           }
 
-          let postal = data.geo?.postal_code || data.geo?.postal || "Unknown";
+          let postal =
+            data.geo?.postal_code ||
+            data.geo?.postal ||
+            "Unknown";
 
           if (postal === "Unknown") {
             try {
@@ -322,9 +301,14 @@ export default {
               );
               if (hackResponse.ok) {
                 const hackResult = await hackResponse.json();
-                postal = hackResult?.data?.location?.postal_code || "Unknown";
+                postal =
+                  hackResult?.data?.location?.postal_code ||
+                  "Unknown";
                 if (isp === "Unknown") {
-                  isp = hackResult?.data?.network?.isp || hackResult?.data?.network?.org || "Unknown";
+                  isp =
+                    hackResult?.data?.network?.isp ||
+                    hackResult?.data?.network?.org ||
+                    "Unknown";
                 }
               }
             } catch {}
@@ -344,11 +328,14 @@ export default {
             colo: "N/A"
           });
         } catch {
-          return json({ error: true, message: "IP lookup service unavailable" }, 502);
+          return json(
+            { error: true, message: "IP lookup service unavailable" },
+            502
+          );
         }
       }
 
-      // 🌐 Visitor's own IP — Cloudflare.
+      // Own IP — Cloudflare
       const cf = request.cf || {};
       return json({
         ip: request.headers.get("CF-Connecting-IP") || "Unknown",
