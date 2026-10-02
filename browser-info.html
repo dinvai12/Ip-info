@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Browser Info - DINUU IP INFO</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080d18;color:#eef2ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+.wrap{max-width:760px;margin:auto;padding:28px 18px 50px}a{color:#67e8f9;text-decoration:none}
+.back{display:inline-block;margin-bottom:24px;padding:10px 14px;border:1px solid #263247;border-radius:12px;background:#111a2a}
+.card{padding:22px;border:1px solid #263247;border-radius:20px;background:#101827;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+h1{margin:0 0 8px;font-size:28px}.sub{opacity:.65;margin-bottom:22px}
+button{border:0;border-radius:13px;padding:13px 18px;background:#16d5ed;color:#061018;font-weight:700;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:18px}
+.item{padding:13px;border-radius:12px;background:#0b1321;border:1px solid #202c40}
+.label{font-size:12px;opacity:.6;margin-bottom:5px}.value{font-weight:650;word-break:break-word}
+.status{font-size:20px;font-weight:800;margin-top:18px}
+</style>
+</head>
+<body><main class="wrap">
+<a class="back" href="/">← Back to IP Info</a>
+<div class="card">
+<h1>🌐 Browser Info</h1>
+<div class="sub">Browser, screen, language and timezone.</div>
+<div id="grid" class="grid"></div>
+</div>
+</main>
+<script>
+const n=navigator,s=screen;
+const rows=[
+["Browser / User Agent",n.userAgent],["Language",n.language],["Languages",(n.languages||[]).join(", ")],
+["Screen Resolution",s.width+" × "+s.height],["Viewport",innerWidth+" × "+innerHeight],
+["Color Depth",s.colorDepth+" bit"],["Timezone",Intl.DateTimeFormat().resolvedOptions().timeZone]
+];
+document.getElementById("grid").innerHTML=rows.map(x=>`<div class="item"><div class="label">${x[0]}</div><div class="value">${String(x[1]??"Unavailable").replace(/</g,"&lt;")}</div></div>`).join("");
+</script>
+</body></html>
