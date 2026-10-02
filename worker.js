@@ -27,6 +27,7 @@ export default {
         }
 
         try {
+          // 🌐 IP99 lookup
           const response = await fetch(
             `https://ip99.com/v1/ip/${encodeURIComponent(searchedIP)}`,
             {
@@ -37,27 +38,7 @@ export default {
             }
           );
 
-          const text = await response.text();
-
-          let data;
-
-          try {
-            data = JSON.parse(text);
-          } catch {
-            return new Response(
-              JSON.stringify({
-                error: true,
-                message: "Invalid response from IP99"
-              }),
-              {
-                status: 502,
-                headers: {
-                  "Content-Type": "application/json",
-                  "Access-Control-Allow-Origin": "*"
-                }
-              }
-            );
-          }
+          const data = await response.json();
 
           if (!response.ok) {
             return new Response(
@@ -78,61 +59,65 @@ export default {
             );
           }
 
+          // 🔢 Get ASN
+          const asnNumber = data.network?.asn;
+
+          // 🏢 Get ISP / Organization from ASN
+          let isp = "Unknown";
+
+          if (asnNumber) {
+            try {
+              const asnResponse = await fetch(
+                `https://api.lookip.io/v1/asn/${asnNumber}`
+              );
+
+              if (asnResponse.ok) {
+                const asnData = await asnResponse.json();
+
+                isp =
+                  asnData.name ||
+                  asnData.organization ||
+                  asnData.orgName ||
+                  asnData.org ||
+                  "Unknown";
+              }
+            } catch {
+              isp = "Unknown";
+            }
+          }
+
           const result = {
             ip: data.ip || searchedIP,
 
             country:
-              data.geo?.country ||
-              data.country ||
-              "Unknown",
+              data.geo?.country || "Unknown",
 
             city:
-              data.geo?.city ||
-              data.city ||
-              "Unknown",
+              data.geo?.city || "Unknown",
 
             region:
-              data.geo?.region ||
-              data.region ||
-              "Unknown",
+              data.geo?.region || "Unknown",
 
             postal:
               data.geo?.postal_code ||
               data.geo?.postal ||
-              data.postal_code ||
               "Unknown",
 
             timezone:
-              data.geo?.timezone ||
-              data.geo?.tz ||
-              data.timezone ||
-              "Unknown",
+              data.geo?.tz || "Unknown",
 
             latitude:
-              data.geo?.latitude ??
-              data.geo?.lat ??
-              data.latitude ??
-              "Unknown",
+              data.geo?.lat ?? "Unknown",
 
             longitude:
-              data.geo?.longitude ??
-              data.geo?.lon ??
-              data.longitude ??
-              "Unknown",
+              data.geo?.lon ?? "Unknown",
 
             asn:
-              data.network?.asn
-                ? `AS${data.network.asn}`
-                : data.asn
-                  ? `AS${data.asn}`
-                  : "Unknown",
+              asnNumber != null
+                ? `AS${asnNumber}`
+                : "Unknown",
 
-            isp:
-              data.network?.organization ||
-              data.network?.org ||
-              data.organization ||
-              data.org ||
-              "Unknown",
+            isp: isp,
 
             colo: "N/A"
           };
