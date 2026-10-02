@@ -1,276 +1,195 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+const API_URL = "/api";
 
-  <title>DINUU IP INFO</title>
-  <meta name="description" content="Check IP address, location, ASN and network information with DINUU IP INFO.">
+const card = document.getElementById("infoCard");
+const input = document.getElementById("ipInput");
+const clearBtn = document.getElementById("clearBtn");
 
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+function showData(data) {
 
-    body {
-      min-height: 100vh;
-      font-family: Arial, sans-serif;
-      background:
-        radial-gradient(circle at top, #162447 0%, #080b14 45%, #05060a 100%);
-      color: #fff;
-      padding: 25px 15px;
-    }
+  if (data.error) {
+    card.innerHTML = `
+      <div class="error">
+        ${data.message || "IP lookup failed"}
+      </div>
+    `;
+    return;
+  }
 
-    .container {
-      width: 100%;
-      max-width: 720px;
-      margin: auto;
-    }
+  const asn = data.asn
+    ? "AS" + String(data.asn).replace(/^AS/i, "")
+    : "Unknown";
 
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .header h1 {
-      font-size: 34px;
-      letter-spacing: 2px;
-      color: #00e5ff;
-      text-shadow: 0 0 20px rgba(0,229,255,.35);
-    }
-
-    .header p {
-      margin-top: 8px;
-      color: #aeb7c7;
-      font-size: 14px;
-    }
-
-    /* SEARCH */
-
-    .search-box {
-      background: rgba(18, 24, 38, 0.78);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 18px;
-      padding: 15px;
-      margin-bottom: 18px;
-      backdrop-filter: blur(15px);
-      box-shadow: 0 15px 45px rgba(0,0,0,.25);
-    }
-
-    .search-title {
-      color: #00e5ff;
-      font-size: 16px;
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
-
-    .search-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    .search-input {
-      flex: 1;
-      min-width: 0;
-      background: rgba(0,0,0,.25);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 10px;
-      padding: 12px;
-      color: #fff;
-      outline: none;
-      font-size: 14px;
-    }
-
-    .search-input:focus {
-      border-color: #00e5ff;
-      box-shadow: 0 0 10px rgba(0,229,255,.15);
-    }
-
-    .search-input::placeholder {
-      color: #788296;
-    }
-
-    .search-btn {
-      border: none;
-      border-radius: 10px;
-      padding: 0 18px;
-      background: #00e5ff;
-      color: #061018;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .search-btn:active {
-      transform: scale(.97);
-    }
-
-    .clear-btn {
-      display: none;
-      margin-top: 9px;
-      background: transparent;
-      border: none;
-      color: #8e9aad;
-      font-size: 12px;
-      cursor: pointer;
-    }
-
-    /* MAIN CARD */
-
-    .card {
-      background: rgba(18, 24, 38, 0.78);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 18px;
-      padding: 20px;
-      backdrop-filter: blur(15px);
-      box-shadow: 0 15px 45px rgba(0,0,0,.35);
-    }
-
-    .section-title {
-      color: #00e5ff;
-      font-size: 18px;
-      font-weight: 700;
-      margin: 5px 0 12px;
-    }
-
-    .section-title:not(:first-child) {
-      margin-top: 25px;
-    }
-
-    .row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 15px;
-      padding: 13px 4px;
-      border-bottom: 1px solid rgba(255,255,255,.07);
-    }
-
-    .row:last-child {
-      border-bottom: none;
-    }
-
-    .label {
-      color: #929caf;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-
-    .value {
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      text-align: right;
-      word-break: break-word;
-    }
-
-    .ip {
-      color: #00e5ff;
-      font-size: 18px;
-      font-weight: 700;
-    }
-
-    .asn {
-      color: #00ff9d;
-      font-size: 16px;
-      font-weight: 700;
-    }
-
-    .status {
-      text-align: center;
-      color: #9da7ba;
-      font-size: 14px;
-      padding: 20px 0;
-    }
-
-    .error {
-      color: #ff6b6b;
-      text-align: center;
-      line-height: 1.6;
-      padding: 20px;
-    }
-
-    .footer {
-      text-align: center;
-      margin-top: 22px;
-      color: #697386;
-      font-size: 12px;
-      line-height: 1.8;
-    }
-
-    .made {
-      color: #00e5ff;
-      font-weight: 700;
-    }
-
-    @media (max-width: 500px) {
-
-      .header h1 {
-        font-size: 28px;
-      }
-
-      .card {
-        padding: 15px;
-      }
-
-      .search-row {
-        gap: 6px;
-      }
-
-      .search-btn {
-        padding: 0 14px;
-      }
-
-      .row {
-        gap: 10px;
-      }
-
-      .label,
-      .value {
-        font-size: 13px;
-      }
-    }
-  </style>
-</head>
-
-<body>
-
-  <div class="container">
-
-    <div class="header">
-      <h1>DINUU IP INFO</h1>
-      <p>Your Public Network Information</p>
+  card.innerHTML = `
+    <div class="section-title">
+      IP Information
     </div>
 
+    <div class="row">
+      <span class="label">IP Address</span>
+      <span class="value ip">${data.ip || "Unknown"}</span>
+    </div>
 
-    <!-- IP SEARCH -->
+    <div class="row">
+      <span class="label">Country</span>
+      <span class="value">${data.country || "Unknown"}</span>
+    </div>
 
-    <div class="search-box">
+    <div class="row">
+      <span class="label">City</span>
+      <span class="value">${data.city || "Unknown"}</span>
+    </div>
 
-      <div class="search-title">
-        🔎 Search IP Address
+    <div class="row">
+      <span class="label">Region</span>
+      <span class="value">${data.region || "Unknown"}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Postal Code</span>
+      <span class="value">${data.postal || "Unknown"}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Timezone</span>
+      <span class="value">${data.timezone || "Unknown"}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Latitude</span>
+      <span class="value">${data.latitude ?? "Unknown"}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Longitude</span>
+      <span class="value">${data.longitude ?? "Unknown"}</span>
+    </div>
+
+    <div class="section-title">
+      Network / ASN Details
+    </div>
+
+    <div class="row">
+      <span class="label">ASN</span>
+      <span class="value asn">${asn}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Network / Organization</span>
+      <span class="value">${data.isp || "Unknown"}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Cloudflare Location</span>
+      <span class="value">${data.colo || "N/A"}</span>
+    </div>
+  `;
+}
+
+
+// নিজের IP load
+async function loadMyIP() {
+
+  card.innerHTML = `
+    <div class="status">
+      Loading your network information...
+    </div>
+  `;
+
+  clearBtn.style.display = "none";
+  input.value = "";
+
+  try {
+
+    const response = await fetch("/api", {
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error("API request failed");
+    }
+
+    const data = await response.json();
+
+    showData(data);
+
+  } catch (error) {
+
+    card.innerHTML = `
+      <div class="error">
+        Unable to load network information.
+        <br>
+        Please refresh and try again.
       </div>
+    `;
 
-      <div class="search-row">
+    console.error(error);
+  }
+}
 
-        <input
-          type="text"
-          id="ipInput"
-          class="search-input"
-          placeholder="Enter IP address..."
-          autocomplete="off"
-        >
 
-        <button
-          class="search-btn"
-          onclick="searchIP()"
-        >
-          Search
-        </button>
+// অন্য IP search
+async function searchIP() {
 
+  const ip = input.value.trim();
+
+  if (!ip) {
+    card.innerHTML = `
+      <div class="error">
+        Please enter an IP address.
       </div>
+    `;
+    return;
+  }
 
-      <button
-        id="clearBtn"
-        class="
+  card.innerHTML = `
+    <div class="status">
+      Searching ${ip}...
+    </div>
+  `;
+
+  clearBtn.style.display = "block";
+
+  try {
+
+    const response = await fetch(
+      "/api?ip=" + encodeURIComponent(ip),
+      {
+        cache: "no-store"
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      throw new Error(data.message || "IP lookup failed");
+    }
+
+    showData(data);
+
+  } catch (error) {
+
+    card.innerHTML = `
+      <div class="error">
+        ${error.message}
+      </div>
+    `;
+
+    console.error(error);
+  }
+}
+
+
+// Enter চাপলে search
+input.addEventListener("keydown", function(event) {
+
+  if (event.key === "Enter") {
+    searchIP();
+  }
+
+});
+
+
+// প্রথমে নিজের IP দেখাবে
+loadMyIP();
+  </script>
