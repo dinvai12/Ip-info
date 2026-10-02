@@ -28,19 +28,19 @@ export default {
 
         try {
           const response = await fetch(
-            `https://ipwho.is/${encodeURIComponent(searchedIP)}`
+            `https://api.ipinfo.io/lite/${encodeURIComponent(searchedIP)}?token=8608e5768a8d8a`
           );
 
           const data = await response.json();
 
-          if (!data.success) {
+          if (!response.ok) {
             return new Response(
               JSON.stringify({
                 error: true,
                 message: data.message || "IP lookup failed"
               }),
               {
-                status: 400,
+                status: response.status,
                 headers: {
                   "Content-Type": "application/json",
                   "Access-Control-Allow-Origin": "*"
@@ -52,17 +52,15 @@ export default {
           return new Response(
             JSON.stringify({
               ip: data.ip || "Unknown",
-              country: data.country_code || data.country || "Unknown",
-              city: data.city || "Unknown",
-              region: data.region || "Unknown",
-              postal: data.postal || "Unknown",
-              timezone: data.timezone?.id || "Unknown",
-              latitude: data.latitude ?? "Unknown",
-              longitude: data.longitude ?? "Unknown",
-              asn: data.connection?.asn
-                ? `AS${data.connection.asn}`
-                : "Unknown",
-              isp: data.connection?.isp || "Unknown",
+              country: data.country_code || "Unknown",
+              city: "Not available",
+              region: "Not available",
+              postal: "Not available",
+              timezone: "Not available",
+              latitude: "Not available",
+              longitude: "Not available",
+              asn: data.asn || "Unknown",
+              isp: data.as_name || "Unknown",
               colo: "N/A"
             }),
             {
@@ -90,7 +88,7 @@ export default {
         }
       }
 
-      // 🌐 Detect visitor's own IP using Cloudflare
+      // 🌐 Visitor's own IP
       const cf = request.cf || {};
 
       const data = {
