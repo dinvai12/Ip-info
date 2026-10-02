@@ -231,6 +231,87 @@ body{
 </head>
 
 <body>
+<style>
+#dinuuuMenuButton{
+  position:fixed;left:16px;top:16px;z-index:9999;
+  width:46px;height:46px;border:1px solid rgba(255,255,255,.15);
+  border-radius:13px;background:rgba(10,15,28,.88);color:#fff;
+  font-size:24px;cursor:pointer;backdrop-filter:blur(12px);
+}
+#dinuuuOverlay{
+  display:none;position:fixed;inset:0;z-index:9997;
+  background:rgba(0,0,0,.48);
+}
+#dinuuuSidebar{
+  position:fixed;left:0;top:0;bottom:0;width:min(320px,86vw);
+  z-index:9998;transform:translateX(-105%);
+  transition:transform .22s ease;
+  background:#0d1424;color:#fff;border-right:1px solid rgba(255,255,255,.12);
+  padding:76px 16px 24px;box-sizing:border-box;overflow:auto;
+}
+#dinuuuSidebar.open{transform:translateX(0)}
+#dinuuuOverlay.open{display:block}
+.dinu-menu-title{font-size:22px;font-weight:800;margin:0 0 18px;}
+.dinu-menu-btn{
+  width:100%;display:flex;align-items:center;gap:12px;
+  padding:15px 14px;margin:9px 0;border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.045);color:#fff;text-decoration:none;
+  cursor:pointer;text-align:left;font-size:15px;
+}
+.dinu-menu-btn small{display:block;opacity:.58;margin-top:3px;font-size:11px}
+.dinu-menu-icon{font-size:22px;width:28px;text-align:center}
+</style>
+
+<button id="dinuuuMenuButton" aria-label="Open menu" type="button">☰</button>
+<div id="dinuuuOverlay"></div>
+<aside id="dinuuuSidebar" aria-label="DINUU tools menu">
+  <div class="dinu-menu-title">DINUU Tools</div>
+
+  <a class="dinu-menu-btn" href="/vpn-checker.html">
+    <span class="dinu-menu-icon">🛡️</span>
+    <span><b>VPN Checker</b><small>Multi-source VPN detection</small></span>
+  </a>
+
+  <a class="dinu-menu-btn" href="/device-info.html">
+    <span class="dinu-menu-icon">📱</span>
+    <span><b>Device Info</b><small>Device and hardware details</small></span>
+  </a>
+
+  <a class="dinu-menu-btn" href="/tor-check.html">
+    <span class="dinu-menu-icon">🧅</span>
+    <span><b>Tor Check</b><small>Check whether your IP is a known Tor exit</small></span>
+  </a>
+
+  <a class="dinu-menu-btn" href="/cloudflare-info.html">
+    <span class="dinu-menu-icon">☁️</span>
+    <span><b>Cloudflare Info</b><small>Cloudflare connection details</small></span>
+  </a>
+
+  <a class="dinu-menu-btn" href="/browser-info.html">
+    <span class="dinu-menu-icon">🌐</span>
+    <span><b>Browser Info</b><small>Browser, language and screen</small></span>
+  </a>
+
+  <a class="dinu-menu-btn" href="/connection-info.html">
+    <span class="dinu-menu-icon">📶</span>
+    <span><b>Connection Info</b><small>Network information exposed by browser</small></span>
+  </a>
+</aside>
+
+<script>
+(() => {
+  const b=document.getElementById("dinuuuMenuButton");
+  const s=document.getElementById("dinuuuSidebar");
+  const o=document.getElementById("dinuuuOverlay");
+  if(!b||!s||!o)return;
+  const close=()=>{s.classList.remove("open");o.classList.remove("open");};
+  b.addEventListener("click",()=>{s.classList.toggle("open");o.classList.toggle("open");});
+  o.addEventListener("click",close);
+})();
+</script>
+
+
 
 <div class="container">
 
@@ -589,6 +670,147 @@ loadMyIP();
 </script>
 
 
+
+<section id="extraTools" style="margin:28px 0 10px;">
+  <div style="font-size:24px;font-weight:700;margin-bottom:14px;">More Tools</div>
+
+  <div style="display:grid;gap:12px;">
+
+    <button class="tool-card" data-tool="device" type="button">
+      <span class="tool-icon">📱</span>
+      <span class="tool-copy">
+        <strong>Your Device Info</strong>
+        <small>Device, OS, CPU, memory and online status</small>
+      </span>
+      <span class="tool-arrow">›</span>
+    </button>
+
+    <button class="tool-card" data-tool="browser" type="button">
+      <span class="tool-icon">🌐</span>
+      <span class="tool-copy">
+        <strong>Browser & Screen</strong>
+        <small>Browser, screen size, language and timezone</small>
+      </span>
+      <span class="tool-arrow">›</span>
+    </button>
+
+    <button class="tool-card" data-tool="connection" type="button">
+      <span class="tool-icon">📶</span>
+      <span class="tool-copy">
+        <strong>Connection Info</strong>
+        <small>Online status, network type and browser connection data</small>
+      </span>
+      <span class="tool-arrow">›</span>
+    </button>
+
+  </div>
+
+  <div id="toolPanel" style="display:none;margin-top:14px;padding:18px;border:1px solid rgba(255,255,255,.10);border-radius:18px;background:rgba(255,255,255,.035);">
+    <div id="toolPanelTitle" style="font-size:20px;font-weight:700;margin-bottom:14px;"></div>
+    <div id="toolGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;"></div>
+  </div>
+</section>
+
+<style>
+.tool-card{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:16px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:16px;
+  background:rgba(255,255,255,.035);
+  color:inherit;
+  cursor:pointer;
+  text-align:left;
+  transition:transform .15s ease,background .15s ease,border-color .15s ease;
+}
+.tool-card:active{transform:scale(.985);}
+.tool-card:hover{background:rgba(255,255,255,.06);border-color:rgba(0,220,255,.25);}
+.tool-icon{font-size:24px;flex:0 0 auto;}
+.tool-copy{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;}
+.tool-copy strong{font-size:16px;}
+.tool-copy small{font-size:12px;opacity:.62;line-height:1.35;}
+.tool-arrow{font-size:28px;opacity:.55;}
+.tool-value{
+  padding:12px;
+  border-radius:11px;
+  background:rgba(255,255,255,.045);
+}
+.tool-label{font-size:11px;opacity:.62;margin-bottom:5px;}
+.tool-data{font-size:14px;font-weight:600;word-break:break-word;}
+</style>
+
+<script>
+(() => {
+  const buttons = document.querySelectorAll(".tool-card");
+  const panel = document.getElementById("toolPanel");
+  const title = document.getElementById("toolPanelTitle");
+  const grid = document.getElementById("toolGrid");
+
+  if (!buttons.length || !panel || !title || !grid) return;
+
+  const esc = (v) => String(v ?? "Unavailable").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+
+  const add = (label, value) => {
+    const el = document.createElement("div");
+    el.className = "tool-value";
+    el.innerHTML =
+      '<div class="tool-label">' + esc(label) + '</div>' +
+      '<div class="tool-data">' + esc(value) + '</div>';
+    grid.appendChild(el);
+  };
+
+  const nav = navigator;
+  const conn = nav.connection || nav.mozConnection || nav.webkitConnection;
+
+  function showTool(type) {
+    grid.innerHTML = "";
+
+    if (type === "device") {
+      title.textContent = "📱 Your Device Info";
+      add("Platform / OS", nav.platform || "Unavailable");
+      add("CPU Cores", nav.hardwareConcurrency ? nav.hardwareConcurrency + " cores" : "Unavailable");
+      add("Device Memory", nav.deviceMemory ? nav.deviceMemory + " GB" : "Unavailable");
+      add("Online Status", nav.onLine ? "Online" : "Offline");
+      add("Touch Points", nav.maxTouchPoints ?? "Unavailable");
+      add("Device Pixel Ratio", window.devicePixelRatio || "Unavailable");
+    }
+
+    if (type === "browser") {
+      title.textContent = "🌐 Browser & Screen";
+      add("Browser", nav.userAgent || "Unavailable");
+      add("Language", nav.language || "Unavailable");
+      add("Languages", Array.isArray(nav.languages) ? nav.languages.join(", ") : "Unavailable");
+      add("Screen Resolution", screen.width + " × " + screen.height);
+      add("Viewport", window.innerWidth + " × " + window.innerHeight);
+      add("Color Depth", screen.colorDepth ? screen.colorDepth + " bit" : "Unavailable");
+      add("Timezone", Intl.DateTimeFormat().resolvedOptions().timeZone || "Unavailable");
+    }
+
+    if (type === "connection") {
+      title.textContent = "📶 Connection Info";
+      add("Online Status", nav.onLine ? "Online" : "Offline");
+      add("Connection Type", conn?.type || "Unavailable");
+      add("Effective Type", conn?.effectiveType || "Unavailable");
+      add("Downlink", conn?.downlink != null ? conn.downlink + " Mbps" : "Unavailable");
+      add("RTT", conn?.rtt != null ? conn.rtt + " ms" : "Unavailable");
+      add("Data Saver", conn?.saveData ? "On" : "Off");
+    }
+
+    panel.style.display = "block";
+    panel.scrollIntoView({behavior:"smooth", block:"nearest"});
+  }
+
+  buttons.forEach(btn => {
+    btn.addEventListener("click", () => showTool(btn.dataset.tool));
+  });
+})();
+</script>
+
 <footer class="site-footer" style="margin-top:40px;padding:24px 16px;text-align:center;border-top:1px solid rgba(255,255,255,.10);color:#94a3b8;">
   <div style="font-weight:600;color:#e2e8f0;margin-bottom:10px;">Contact</div>
   <a href="https://t.me/dinchoto" target="_blank" rel="noopener noreferrer"
@@ -599,85 +821,7 @@ loadMyIP();
 </footer>
 
 
-<section id="deviceInfoSection" style="margin:28px 0;">
-  <button id="deviceInfoToggle" type="button"
-    style="width:100%;padding:16px 18px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.04);color:inherit;cursor:pointer;font-size:17px;font-weight:600;text-align:left;">
-    📱 Your Device Info <span style="float:right;">＋</span>
-  </button>
 
-  <div id="deviceInfoPanel" style="display:none;margin-top:12px;padding:18px;border:1px solid rgba(255,255,255,.10);border-radius:16px;background:rgba(255,255,255,.025);">
-    <div id="deviceInfoGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;"></div>
-  </div>
-</section>
-
-<script>
-(() => {
-  const toggle = document.getElementById("deviceInfoToggle");
-  const panel = document.getElementById("deviceInfoPanel");
-  const grid = document.getElementById("deviceInfoGrid");
-
-  if (!toggle || !panel || !grid) return;
-
-  let loaded = false;
-
-  const esc = (value) =>
-    String(value ?? "Unavailable").replace(/[&<>"']/g, c => ({
-      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
-    }[c]));
-
-  function addRow(label, value) {
-    const item = document.createElement("div");
-    item.style.cssText =
-      "padding:12px;border-radius:10px;background:rgba(255,255,255,.04);";
-    item.innerHTML =
-      '<div style="font-size:12px;opacity:.65;margin-bottom:4px;">' +
-      esc(label) +
-      '</div><div style="font-weight:500;word-break:break-word;">' +
-      esc(value) +
-      "</div>";
-    grid.appendChild(item);
-  }
-
-  toggle.addEventListener("click", () => {
-    const isOpen = panel.style.display !== "none";
-    panel.style.display = isOpen ? "none" : "block";
-    toggle.querySelector("span").textContent = isOpen ? "＋" : "−";
-
-    // Device information is collected only when the user opens this panel.
-    if (loaded || isOpen) {
-      if (loaded) return;
-      loaded = true;
-
-      const ua = navigator.userAgent || "Unavailable";
-      const platform = navigator.platform || "Unavailable";
-      const screenSize = `${screen.width} × ${screen.height}`;
-      const viewport = `${window.innerWidth} × ${window.innerHeight}`;
-      const dpr = window.devicePixelRatio || "Unavailable";
-      const language = navigator.language || "Unavailable";
-      const timezone =
-        Intl.DateTimeFormat().resolvedOptions().timeZone || "Unavailable";
-      const online = navigator.onLine ? "Online" : "Offline";
-      const cores = navigator.hardwareConcurrency
-        ? `${navigator.hardwareConcurrency} cores`
-        : "Unavailable";
-      const memory = navigator.deviceMemory
-        ? `${navigator.deviceMemory} GB`
-        : "Unavailable";
-
-      addRow("Browser / User Agent", ua);
-      addRow("Platform / OS", platform);
-      addRow("Screen Resolution", screenSize);
-      addRow("Viewport", viewport);
-      addRow("Device Pixel Ratio", dpr);
-      addRow("Language", language);
-      addRow("Timezone", timezone);
-      addRow("Online Status", online);
-      addRow("CPU Cores", cores);
-      addRow("Device Memory", memory);
-    }
-  });
-})();
-</script>
 
 </body>
   </html>
