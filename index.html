@@ -1,195 +1,109 @@
-<script>
-const API_URL = "/api";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-const card = document.getElementById("infoCard");
-const input = document.getElementById("ipInput");
-const clearBtn = document.getElementById("clearBtn");
+  <title>DINUU IP INFO</title>
 
-function showData(data) {
+  <meta
+    name="description"
+    content="Check your public IP address, location, ASN, ISP and network information with DINUU IP INFO."
+  >
 
-  if (data.error) {
-    card.innerHTML = `
-      <div class="error">
-        ${data.message || "IP lookup failed"}
-      </div>
-    `;
-    return;
-  }
+  <meta name="robots" content="index, follow">
 
-  const asn = data.asn
-    ? "AS" + String(data.asn).replace(/^AS/i, "")
-    : "Unknown";
-
-  card.innerHTML = `
-    <div class="section-title">
-      IP Information
-    </div>
-
-    <div class="row">
-      <span class="label">IP Address</span>
-      <span class="value ip">${data.ip || "Unknown"}</span>
-    </div>
-
-    <div class="row">
-      <span class="label">Country</span>
-      <span class="value">${data.country || "Unknown"}</span>
-    </div>
-
-    <div class="row">
-      <span class="label">City</span>
-      <span class="value">${data.city || "Unknown"}</span>
-    </div>
-
-    <div class="row">
-      <span class="label">Region</span>
-      <span class="value">${data.region || "Unknown"}</span>
-    </div>
-
-    <div class="row">
-      <span class="label">Postal Code</span>
-      <span class="value">${data.postal || "Unknown"}</span>
-    </div>
-
-    <div class="row">
-      <span class="label">Timezone</span>
-      <span class="value">${data.timezone || "Unknown"}</span>
-    </div>
-
-    <div class="row">
-      <span class="label">Latitude</span>
-      <span class="value">${data.latitude ?? "Unknown"}</span>
-    </div>
-
-    <div class="row">
-      <span class="label">Longitude</span>
-      <span class="value">${data.longitude ?? "Unknown"}</span>
-    </div>
-
-    <div class="section-title">
-      Network / ASN Details
-    </div>
-
-    <div class="row">
-      <span class="label">ASN</span>
-      <span class="value asn">${asn}</span>
-    </div>
-
-    <div class="row">
-      <span class="label">Network / Organization</span>
-      <span class="value">${data.isp || "Unknown"}</span>
-    </div>
-
-    <div class="row">
-      <span class="label">Cloudflare Location</span>
-      <span class="value">${data.colo || "N/A"}</span>
-    </div>
-  `;
-}
-
-
-// নিজের IP load
-async function loadMyIP() {
-
-  card.innerHTML = `
-    <div class="status">
-      Loading your network information...
-    </div>
-  `;
-
-  clearBtn.style.display = "none";
-  input.value = "";
-
-  try {
-
-    const response = await fetch("/api", {
-      cache: "no-store"
-    });
-
-    if (!response.ok) {
-      throw new Error("API request failed");
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
-    const data = await response.json();
-
-    showData(data);
-
-  } catch (error) {
-
-    card.innerHTML = `
-      <div class="error">
-        Unable to load network information.
-        <br>
-        Please refresh and try again.
-      </div>
-    `;
-
-    console.error(error);
-  }
-}
-
-
-// অন্য IP search
-async function searchIP() {
-
-  const ip = input.value.trim();
-
-  if (!ip) {
-    card.innerHTML = `
-      <div class="error">
-        Please enter an IP address.
-      </div>
-    `;
-    return;
-  }
-
-  card.innerHTML = `
-    <div class="status">
-      Searching ${ip}...
-    </div>
-  `;
-
-  clearBtn.style.display = "block";
-
-  try {
-
-    const response = await fetch(
-      "/api?ip=" + encodeURIComponent(ip),
-      {
-        cache: "no-store"
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok || data.error) {
-      throw new Error(data.message || "IP lookup failed");
+    body {
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at top, #162447 0%, #080b14 45%, #05060a 100%);
+      color: #ffffff;
+      padding: 25px 15px 35px;
     }
 
-    showData(data);
+    .container {
+      width: 100%;
+      max-width: 720px;
+      margin: auto;
+    }
 
-  } catch (error) {
+    /* HEADER */
 
-    card.innerHTML = `
-      <div class="error">
-        ${error.message}
-      </div>
-    `;
+    .header {
+      text-align: center;
+      margin-bottom: 22px;
+    }
 
-    console.error(error);
-  }
-}
+    .header h1 {
+      font-size: 34px;
+      letter-spacing: 3px;
+      color: #00e5ff;
+      text-shadow: 0 0 20px rgba(0, 229, 255, 0.35);
+    }
 
+    .header p {
+      margin-top: 9px;
+      color: #aeb7c7;
+      font-size: 14px;
+    }
 
-// Enter চাপলে search
-input.addEventListener("keydown", function(event) {
+    /* SEARCH */
 
-  if (event.key === "Enter") {
-    searchIP();
-  }
+    .search-box {
+      background: rgba(18, 24, 38, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 18px;
+      backdrop-filter: blur(15px);
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.3);
+    }
 
-});
+    .search-title {
+      color: #00e5ff;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
 
+    .search-row {
+      display: flex;
+      gap: 10px;
+    }
 
-// প্রথমে নিজের IP দেখাবে
-loadMyIP();
-  </script>
+    .search-input {
+      flex: 1;
+      min-width: 0;
+      height: 52px;
+      padding: 0 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      outline: none;
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffffff;
+      font-size: 15px;
+    }
+
+    .search-input::placeholder {
+      color: #788296;
+    }
+
+    .search-input:focus {
+      border-color: #00e5ff;
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.15);
+    }
+
+    .search-btn {
+      height: 52px;
+      padding: 0 20px;
+      border: none;
+      border-radius: 12px;
+      background: #00e5ff;
