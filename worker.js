@@ -76,9 +76,7 @@ export default {
             });
             if (!r.ok) return;
             const d = await r.json();
-            const yes = d?.is_vpn === true ||
-              d?.verdict === "vpn_detected" ||
-              d?.verdict === "vpn_likely";
+            const yes = d?.is_vpn === true;
             setSource("iplogs", yes, d?.verdict || "");
           } catch {}
         })());
@@ -112,15 +110,16 @@ export default {
         jobs.push((async () => {
           try {
             const key = env.PROXYCHECK_API_KEY;
-            const qs = key ? `?key=${encodeURIComponent(key)}` : "";
-            const r = await safeFetch(`https://proxycheck.io/v3/${encodeURIComponent(clientIP)}${qs}`);
+            const qs = key
+              ? `?vpn=2&key=${encodeURIComponent(key)}`
+              : `?vpn=2`;
+            const r = await safeFetch(`https://proxycheck.io/v2/${encodeURIComponent(clientIP)}${qs}`);
             if (!r.ok) return;
             const d = await r.json();
             const row = d?.[clientIP];
-            const yes = row?.detections?.vpn === true ||
-              row?.detections?.anonymous?.vpn === true ||
-              row?.type === "VPN";
-            if (typeof yes === "boolean") setSource("proxycheck", yes);
+            const type = String(row?.type || "").toUpperCase();
+            if (type === "VPN") setSource("proxycheck", true);
+            else if (row && (row?.type === "Clean" || row?.type === "Residential")) setSource("proxycheck", false);
           } catch {}
         })());
 
