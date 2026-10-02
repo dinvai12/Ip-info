@@ -5,7 +5,7 @@ export default {
     if (url.pathname === "/api") {
       const searchedIP = url.searchParams.get("ip");
 
-      // Search another IP
+      // 🔎 Search another IP
       if (searchedIP) {
         if (
           searchedIP.length > 45 ||
@@ -27,86 +27,89 @@ export default {
         }
 
         try {
-          const apiURL =
-            `https://free.freeipapi.com/api/v1/json/${searchedIP}`;
+          const response = await fetch(
+            `https://ip99.com/v1/ip/${encodeURIComponent(searchedIP)}`
+          );
 
-          const response = await fetch(apiURL, {
-            method: "GET",
+          const data = await response.json();
+
+          if (!response.ok || data.error) {
+            return new Response(
+              JSON.stringify({
+                error: true,
+                message:
+                  data.error?.message ||
+                  `IP lookup failed (${response.status})`
+              }),
+              {
+                status: response.status || 502,
+                headers: {
+                  "Content-Type": "application/json",
+                  "Access-Control-Allow-Origin": "*"
+                }
+              }
+            );
+          }
+
+          const result = {
+            ip: data.ip || searchedIP,
+
+            country:
+              data.geo?.country ||
+              "Unknown",
+
+            city:
+              data.geo?.city ||
+              "Unknown",
+
+            region:
+              data.geo?.region ||
+              "Unknown",
+
+            postal:
+              data.geo?.postal_code ||
+              data.geo?.postal ||
+              "Unknown",
+
+            timezone:
+              data.geo?.tz ||
+              data.geo?.timezone ||
+              "Unknown",
+
+            latitude:
+              data.geo?.lat ??
+              "Unknown",
+
+            longitude:
+              data.geo?.lon ??
+              "Unknown",
+
+            asn:
+              data.network?.asn
+                ? `AS${data.network.asn}`
+                : "Unknown",
+
+            isp:
+              data.network?.organization ||
+              data.network?.org ||
+              data.network?.asn_org ||
+              "Unknown",
+
+            colo: "N/A"
+          };
+
+          return new Response(JSON.stringify(result), {
             headers: {
-              "Accept": "application/json"
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*"
             }
           });
-
-          const body = await response.text();
-
-          if (!response.ok) {
-            return new Response(
-              JSON.stringify({
-                error: true,
-                message: `FreeIPAPI HTTP ${response.status}`,
-                details: body.substring(0, 200)
-              }),
-              {
-                status: 502,
-                headers: {
-                  "Content-Type": "application/json",
-                  "Access-Control-Allow-Origin": "*"
-                }
-              }
-            );
-          }
-
-          let data;
-
-          try {
-            data = JSON.parse(body);
-          } catch {
-            return new Response(
-              JSON.stringify({
-                error: true,
-                message: "FreeIPAPI returned non-JSON response",
-                details: body.substring(0, 200)
-              }),
-              {
-                status: 502,
-                headers: {
-                  "Content-Type": "application/json",
-                  "Access-Control-Allow-Origin": "*"
-                }
-              }
-            );
-          }
-
-          return new Response(
-            JSON.stringify({
-              ip: data.ipAddress || searchedIP,
-              country: data.countryCode || "Unknown",
-              city: data.cityName || "Unknown",
-              region: data.regionName || "Unknown",
-              postal: data.zipCode || "Unknown",
-              timezone:
-                Array.isArray(data.timeZones)
-                  ? data.timeZones[0] || "Unknown"
-                  : data.timeZones || "Unknown",
-              latitude: data.latitude ?? "Unknown",
-              longitude: data.longitude ?? "Unknown",
-              asn: data.asn ? `AS${data.asn}` : "Unknown",
-              isp: data.asnOrganization || "Unknown",
-              colo: "N/A"
-            }),
-            {
-              headers: {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*"
-              }
-            }
-          );
 
         } catch (error) {
           return new Response(
             JSON.stringify({
               error: true,
-              message: "Worker could not reach FreeIPAPI"
+              message: "IP lookup service unavailable"
             }),
             {
               status: 502,
@@ -119,7 +122,7 @@ export default {
         }
       }
 
-      // Your own IP
+      // 🌐 Visitor's own IP — Cloudflare
       const cf = request.cf || {};
 
       const data = {
