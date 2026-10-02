@@ -44,6 +44,7 @@ export default {
       // is not counted as VPN.
       if (vpnCheck) {
         const sources = {
+          iphub: { name: "IPHub", detected: null, status: "Unavailable" },
           iplogs: { name: "IPLogs", detected: null, status: "Unavailable" },
           ip99: { name: "IP99", detected: null, status: "Unavailable" },
           hackmyip: { name: "HackMyIP", detected: null, status: "Unavailable" },
@@ -66,7 +67,30 @@ export default {
 
         const jobs = [];
 
-        // 1) IPLogs — free/no key.
+        // 1) IPHub — free Basic API key. We count only explicit VPN signals.
+        // block=1 can also mean hosting/proxy/Tor, so it is NOT enough by itself.
+        jobs.push((async () => {
+          if (!env.IPHUB_API_KEY) return;
+          try {
+            const r = await safeFetch(`https://v2.api.iphub.info/ip/${encodeURIComponent(clientIP)}`, {
+              headers: {
+                "X-Key": env.IPHUB_API_KEY,
+                "Accept": "application/json",
+                "Accept-Version": "2.2"
+              }
+            });
+            if (!r.ok) return;
+            const d = await r.json();
+            const reason = String(d?.blockReason || "").toLowerCase();
+            const pt = d?.proxyType || {};
+            const yes = pt?.vpn === true || /\bvpn\b/.test(reason);
+            const explicitNo = d?.block === 0 || (pt && Object.values(pt).every(v => v === false));
+            if (yes) setSource("iphub", true, d?.blockReason || "");
+            else if (explicitNo) setSource("iphub", false);
+          } catch {}
+        })());
+
+        // 2) IPLogs — free/no key.
         jobs.push((async () => {
           try {
             const r = await safeFetch("https://iplogs.com/v1/check", {
@@ -81,7 +105,7 @@ export default {
           } catch {}
         })());
 
-        // 2) IP99 — existing secret is optional.
+        // 3) IP99 — existing secret is optional.
         jobs.push((async () => {
           try {
             const headers = { "Accept": "application/json" };
@@ -94,7 +118,7 @@ export default {
           } catch {}
         })());
 
-        // 3) HackMyIP — explicit VPN field only.
+        // 4) HackMyIP — explicit VPN field only.
         jobs.push((async () => {
           try {
             const r = await safeFetch(`https://hackmyip.com/api/lookup?ip=${encodeURIComponent(clientIP)}`);
@@ -105,7 +129,7 @@ export default {
           } catch {}
         })());
 
-        // 4) ProxyCheck.io — v3. If a key is not configured, it uses its
+        // 5) ProxyCheck.io — v3. If a key is not configured, it uses its
         // public/free allowance. We inspect only the VPN detection flag.
         jobs.push((async () => {
           try {
@@ -123,7 +147,7 @@ export default {
           } catch {}
         })());
 
-        // 5) IPQualityScore — API key required.
+        // 6) IPQualityScore — API key required.
         jobs.push((async () => {
           if (!env.IPQS_API_KEY) return;
           try {
@@ -136,7 +160,7 @@ export default {
           } catch {}
         })());
 
-        // 6) VPNAPI.io — API key required.
+        // 7) VPNAPI.io — API key required.
         jobs.push((async () => {
           if (!env.VPNAPI_KEY) return;
           try {
@@ -149,7 +173,7 @@ export default {
           } catch {}
         })());
 
-        // 7) Scamalytics — username + API key required.
+        // 8) Scamalytics — username + API key required.
         // The account is tied to the node selected at signup. If no
         // SCAMALYTICS_API_BASE secret is set, try both documented nodes and
         // use the first successful response.
@@ -189,7 +213,7 @@ export default {
           }
         })());
 
-        // 8) IPinfo Privacy — token required and privacy detection access required.
+        // 9) IPinfo Privacy — token required and privacy detection access required.
         jobs.push((async () => {
           if (!env.IPINFO_TOKEN) return;
           try {
@@ -202,7 +226,7 @@ export default {
           } catch {}
         })());
 
-        // 9) IP2Proxy/IP2Location — key required. IP2Proxy web-service response
+        // 10) IP2Proxy/IP2Location — key required. IP2Proxy web-service response
         // commonly exposes proxyType; only explicit VPN values count.
         jobs.push((async () => {
           if (!env.IP2PROXY_API_KEY) return;
@@ -217,7 +241,7 @@ export default {
           } catch {}
         })());
 
-        // 10) GetIPIntel — contact/email required. Its response is a
+        // 11) GetIPIntel — contact/email required. Its response is a
         // probability, not a boolean, so >= 0.99 is treated as a strong signal.
         jobs.push((async () => {
           if (!env.GETIPINTEL_CONTACT) return;
@@ -246,7 +270,7 @@ export default {
           status,
           detected_sources: positive,
           checked_sources: checked.length,
-          total_sources: 10,
+          total_sources: 11,
           sources,
           signals
         });
