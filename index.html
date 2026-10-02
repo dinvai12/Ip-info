@@ -5,70 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>DINUU IP INFO</title>
+  <meta name="description" content="Check your public IP address, location, ASN and network information with DINUU IP INFO.">
 
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: Arial, sans-serif;
     }
 
     body {
       min-height: 100vh;
-      background: linear-gradient(145deg, #071525, #101827);
-      color: white;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at top, #162447 0%, #080b14 45%, #05060a 100%);
+      color: #fff;
       padding: 25px 15px;
     }
 
     .container {
       width: 100%;
-      max-width: 650px;
+      max-width: 720px;
       margin: auto;
     }
 
     .header {
       text-align: center;
-      margin: 25px 0;
+      margin-bottom: 25px;
     }
 
     .header h1 {
       font-size: 34px;
       letter-spacing: 2px;
       color: #00e5ff;
+      text-shadow: 0 0 20px rgba(0,229,255,.35);
     }
 
     .header p {
       margin-top: 8px;
-      color: #aeb8c5;
-      font-size: 15px;
+      color: #aeb7c7;
+      font-size: 14px;
     }
 
     .card {
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 20px;
+      background: rgba(18, 24, 38, 0.78);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 18px;
       padding: 20px;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+      backdrop-filter: blur(15px);
+      box-shadow: 0 15px 45px rgba(0,0,0,.35);
     }
 
-    .status {
-      text-align: center;
-      padding: 15px;
+    .section-title {
       color: #00e5ff;
+      font-size: 18px;
+      font-weight: 700;
+      margin: 5px 0 12px;
     }
 
-    .info {
-      display: none;
+    .section-title:not(:first-child) {
+      margin-top: 25px;
     }
 
     .row {
       display: flex;
       justify-content: space-between;
+      align-items: flex-start;
       gap: 15px;
-      padding: 14px 5px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 13px 4px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
     }
 
     .row:last-child {
@@ -76,39 +81,75 @@
     }
 
     .label {
-      color: #9da9b8;
+      color: #929caf;
+      font-size: 14px;
+      flex-shrink: 0;
     }
 
     .value {
-      text-align: right;
-      color: white;
+      color: #fff;
+      font-size: 14px;
       font-weight: 600;
+      text-align: right;
       word-break: break-word;
     }
 
     .ip {
-      font-size: 22px;
       color: #00e5ff;
+      font-size: 18px;
+      font-weight: 700;
     }
 
-    footer {
+    .asn {
+      color: #00ff9d;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .status {
       text-align: center;
-      margin-top: 25px;
-      color: #778292;
-      font-size: 13px;
-    }
-
-    .made {
-      margin-top: 8px;
-      color: #00e5ff;
-      font-weight: bold;
-      letter-spacing: 1px;
+      color: #9da7ba;
+      font-size: 14px;
+      padding: 20px 0;
     }
 
     .error {
       color: #ff6b6b;
       text-align: center;
       line-height: 1.6;
+      padding: 20px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 22px;
+      color: #697386;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    .made {
+      color: #00e5ff;
+      font-weight: 700;
+    }
+
+    @media (max-width: 500px) {
+      .header h1 {
+        font-size: 28px;
+      }
+
+      .card {
+        padding: 15px;
+      }
+
+      .row {
+        gap: 10px;
+      }
+
+      .label,
+      .value {
+        font-size: 13px;
+      }
     }
   </style>
 </head>
@@ -122,126 +163,125 @@
       <p>Your Public Network Information</p>
     </div>
 
-    <div class="card">
+    <div class="card" id="infoCard">
 
-      <div id="loading" class="status">
+      <div class="status" id="status">
         Loading your network information...
       </div>
 
-      <div id="error" class="error"></div>
-
-      <div id="info" class="info">
-
-        <div class="row">
-          <span class="label">IP Address</span>
-          <span class="value ip" id="ip">-</span>
-        </div>
-
-        <div class="row">
-          <span class="label">Country</span>
-          <span class="value" id="country">-</span>
-        </div>
-
-        <div class="row">
-          <span class="label">City</span>
-          <span class="value" id="city">-</span>
-        </div>
-
-        <div class="row">
-          <span class="label">Region</span>
-          <span class="value" id="region">-</span>
-        </div>
-
-        <div class="row">
-          <span class="label">Postal Code</span>
-          <span class="value" id="postal">-</span>
-        </div>
-
-        <div class="row">
-          <span class="label">Timezone</span>
-          <span class="value" id="timezone">-</span>
-        </div>
-
-        <div class="row">
-          <span class="label">Latitude</span>
-          <span class="value" id="latitude">-</span>
-        </div>
-
-        <div class="row">
-          <span class="label">Longitude</span>
-          <span class="value" id="longitude">-</span>
-        </div>
-
-        <div class="row">
-          <span class="label">ASN</span>
-          <span class="value" id="asn">-</span>
-        </div>
-
-        <div class="row">
-          <span class="label">ISP / Organization</span>
-          <span class="value" id="isp">-</span>
-        </div>
-
-        <div class="row">
-          <span class="label">Cloudflare Location</span>
-          <span class="value" id="colo">-</span>
-        </div>
-
-      </div>
     </div>
 
-    <footer>
-      Information provided by Cloudflare
-      <div class="made">MADE BY DINUU</div>
-    </footer>
+    <div class="footer">
+      Information provided by Cloudflare<br>
+      <span class="made">MADE BY DINUU</span>
+    </div>
 
   </div>
 
-<script>
+  <script>
+    const API_URL = "/api";
 
-const API_URL = "/api";
+    async function loadIPInfo() {
+      const card = document.getElementById("infoCard");
 
-async function loadIPInfo() {
+      try {
+        const response = await fetch(API_URL);
 
-  try {
+        if (!response.ok) {
+          throw new Error("API request failed");
+        }
 
-    const response = await fetch(API_URL);
+        const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error("API request failed");
+        card.innerHTML = `
+
+          <div class="section-title">
+            IP Information
+          </div>
+
+          <div class="row">
+            <span class="label">IP Address</span>
+            <span class="value ip">${data.ip || "Unknown"}</span>
+          </div>
+
+          <div class="row">
+            <span class="label">Country</span>
+            <span class="value">${data.country || "Unknown"}</span>
+          </div>
+
+          <div class="row">
+            <span class="label">City</span>
+            <span class="value">${data.city || "Unknown"}</span>
+          </div>
+
+          <div class="row">
+            <span class="label">Region</span>
+            <span class="value">${data.region || "Unknown"}</span>
+          </div>
+
+          <div class="row">
+            <span class="label">Postal Code</span>
+            <span class="value">${data.postal || "Unknown"}</span>
+          </div>
+
+          <div class="row">
+            <span class="label">Timezone</span>
+            <span class="value">${data.timezone || "Unknown"}</span>
+          </div>
+
+          <div class="row">
+            <span class="label">Latitude</span>
+            <span class="value">${data.latitude || "Unknown"}</span>
+          </div>
+
+          <div class="row">
+            <span class="label">Longitude</span>
+            <span class="value">${data.longitude || "Unknown"}</span>
+          </div>
+
+
+          <div class="section-title">
+            Network / ASN Details
+          </div>
+
+          <div class="row">
+            <span class="label">ASN</span>
+            <span class="value asn">
+              ${data.asn ? "AS" + data.asn : "Unknown"}
+            </span>
+          </div>
+
+          <div class="row">
+            <span class="label">Network / Organization</span>
+            <span class="value">
+              ${data.isp || "Unknown"}
+            </span>
+          </div>
+
+          <div class="row">
+            <span class="label">Cloudflare Location</span>
+            <span class="value">
+              ${data.colo || "Unknown"}
+            </span>
+          </div>
+
+        `;
+
+      } catch (error) {
+
+        card.innerHTML = `
+          <div class="error">
+            Unable to load network information.<br>
+            Please refresh the page and try again.
+          </div>
+        `;
+
+        console.error(error);
+      }
     }
 
-    const data = await response.json();
-
-    document.getElementById("ip").textContent = data.ip || "Unknown";
-    document.getElementById("country").textContent = data.country || "Unknown";
-    document.getElementById("city").textContent = data.city || "Unknown";
-    document.getElementById("region").textContent = data.region || "Unknown";
-    document.getElementById("postal").textContent = data.postal || "Unknown";
-    document.getElementById("timezone").textContent = data.timezone || "Unknown";
-    document.getElementById("latitude").textContent = data.latitude || "Unknown";
-    document.getElementById("longitude").textContent = data.longitude || "Unknown";
-    document.getElementById("asn").textContent = data.asn || "Unknown";
-    document.getElementById("isp").textContent = data.isp || "Unknown";
-    document.getElementById("colo").textContent = data.colo || "Unknown";
-
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("info").style.display = "block";
-
-  } catch (error) {
-
-    document.getElementById("loading").style.display = "none";
-
-    document.getElementById("error").innerHTML =
-      "Unable to load IP information.<br>Please try again later.";
-
-  }
-
-}
-
-loadIPInfo();
-
-</script>
+    loadIPInfo();
+  </script>
 
 </body>
-                                          </html>
+    </html>
