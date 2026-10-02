@@ -5,7 +5,7 @@ export default {
     if (url.pathname === "/api") {
       const searchedIP = url.searchParams.get("ip");
 
-      // 🔎 Search another IP
+      // Search another IP
       if (searchedIP) {
         if (
           searchedIP.length > 45 ||
@@ -28,20 +28,23 @@ export default {
 
         try {
           const apiURL =
-            `https://free.freeipapi.com/api/v1/json/${encodeURIComponent(searchedIP)}`;
+            `https://free.freeipapi.com/api/v1/json/${searchedIP}`;
 
-          const response = await fetch(apiURL);
-          const text = await response.text();
+          const response = await fetch(apiURL, {
+            method: "GET",
+            headers: {
+              "Accept": "application/json"
+            }
+          });
 
-          let data;
+          const body = await response.text();
 
-          try {
-            data = JSON.parse(text);
-          } catch {
+          if (!response.ok) {
             return new Response(
               JSON.stringify({
                 error: true,
-                message: "Invalid response from IP lookup service"
+                message: `FreeIPAPI HTTP ${response.status}`,
+                details: body.substring(0, 200)
               }),
               {
                 status: 502,
@@ -53,14 +56,19 @@ export default {
             );
           }
 
-          if (!response.ok) {
+          let data;
+
+          try {
+            data = JSON.parse(body);
+          } catch {
             return new Response(
               JSON.stringify({
                 error: true,
-                message: data.message || `Lookup failed (${response.status})`
+                message: "FreeIPAPI returned non-JSON response",
+                details: body.substring(0, 200)
               }),
               {
-                status: response.status,
+                status: 502,
                 headers: {
                   "Content-Type": "application/json",
                   "Access-Control-Allow-Origin": "*"
@@ -69,34 +77,36 @@ export default {
             );
           }
 
-          const result = {
-            ip: data.ipAddress || searchedIP,
-            country: data.countryCode || data.countryName || "Unknown",
-            city: data.cityName || "Unknown",
-            region: data.regionName || "Unknown",
-            postal: data.zipCode || "Unknown",
-            timezone: Array.isArray(data.timeZones)
-              ? data.timeZones[0] || "Unknown"
-              : data.timeZones || "Unknown",
-            latitude: data.latitude ?? "Unknown",
-            longitude: data.longitude ?? "Unknown",
-            asn: data.asn ? `AS${data.asn}` : "Unknown",
-            isp: data.asnOrganization || "Unknown",
-            colo: "N/A"
-          };
-
-          return new Response(JSON.stringify(result), {
-            headers: {
-              "Content-Type": "application/json",
-              "Access-Control-Allow-Origin": "*"
+          return new Response(
+            JSON.stringify({
+              ip: data.ipAddress || searchedIP,
+              country: data.countryCode || "Unknown",
+              city: data.cityName || "Unknown",
+              region: data.regionName || "Unknown",
+              postal: data.zipCode || "Unknown",
+              timezone:
+                Array.isArray(data.timeZones)
+                  ? data.timeZones[0] || "Unknown"
+                  : data.timeZones || "Unknown",
+              latitude: data.latitude ?? "Unknown",
+              longitude: data.longitude ?? "Unknown",
+              asn: data.asn ? `AS${data.asn}` : "Unknown",
+              isp: data.asnOrganization || "Unknown",
+              colo: "N/A"
+            }),
+            {
+              headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+              }
             }
-          });
+          );
 
         } catch (error) {
           return new Response(
             JSON.stringify({
               error: true,
-              message: "IP lookup service unavailable"
+              message: "Worker could not reach FreeIPAPI"
             }),
             {
               status: 502,
@@ -109,7 +119,7 @@ export default {
         }
       }
 
-      // 🌐 Visitor's own IP — Cloudflare
+      // Your own IP
       const cf = request.cf || {};
 
       const data = {
