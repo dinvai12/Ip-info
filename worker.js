@@ -28,7 +28,7 @@ export default {
 
         try {
           const response = await fetch(
-            `https://api.ipinfo.io/lite/${encodeURIComponent(searchedIP)}?token=8608e5768a8d8a`
+            `https://free.freeipapi.com/api/v1/json/${encodeURIComponent(searchedIP)}`
           );
 
           const data = await response.json();
@@ -51,16 +51,21 @@ export default {
 
           return new Response(
             JSON.stringify({
-              ip: data.ip || "Unknown",
-              country: data.country_code || "Unknown",
-              city: "Not available",
-              region: "Not available",
-              postal: "Not available",
-              timezone: "Not available",
-              latitude: "Not available",
-              longitude: "Not available",
-              asn: data.asn || "Unknown",
-              isp: data.as_name || "Unknown",
+              ip: data.ipAddress || searchedIP,
+              country: data.countryCode || data.countryName || "Unknown",
+              city: data.cityName || "Unknown",
+              region: data.regionName || "Unknown",
+              postal: data.zipCode || "Unknown",
+              timezone: data.timeZone || "Unknown",
+              latitude: data.latitude ?? "Unknown",
+              longitude: data.longitude ?? "Unknown",
+              asn: data.asn
+                ? `AS${data.asn}`
+                : "Unknown",
+              isp:
+                data.asnOrganization ||
+                data.organization ||
+                "Unknown",
               colo: "N/A"
             }),
             {
@@ -88,7 +93,7 @@ export default {
         }
       }
 
-      // 🌐 Visitor's own IP
+      // 🌐 Visitor's own IP — Cloudflare
       const cf = request.cf || {};
 
       const data = {
