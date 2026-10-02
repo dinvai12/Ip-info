@@ -154,16 +154,17 @@ export default {
         jobs.push((async () => {
           if (!env.SCAMALYTICS_API_KEY) return;
           try {
-            const base = env.SCAMALYTICS_API_BASE || "https://api11.scamalytics.com/v3/";
-            const r = await safeFetch(`${base.replace(/\/?$/, "/")}${encodeURIComponent(clientIP)}?key=${encodeURIComponent(env.SCAMALYTICS_API_KEY)}`);
-            if (!r.ok) return;
-            const d = await r.json();
-            const yes =
-              d?.vpn === true ||
-              d?.is_vpn === true ||
-              d?.fraud_type === "vpn" ||
-              d?.ip?.vpn === true;
-            if (typeof yes === "boolean") setSource("scamalytics", yes);
+            if (!env.SCAMALYTICS_USERNAME || !env.SCAMALYTICS_API_KEY) return;
+            try {
+              const base = env.SCAMALYTICS_API_BASE || "https://api12.scamalytics.com/v3/";
+              const r = await safeFetch(
+                `${base.replace(/\/?$/, "/")}${encodeURIComponent(env.SCAMALYTICS_USERNAME)}?key=${encodeURIComponent(env.SCAMALYTICS_API_KEY)}&ip=${encodeURIComponent(clientIP)}`
+              );
+              if (!r.ok) return;
+              const d = await r.json();
+              const yes = d?.scamalytics?.scamalytics_proxy?.is_vpn === true;
+              if (typeof yes === "boolean") setSource("scamalytics", yes);
+            } catch {}
           } catch {}
         })());
 
