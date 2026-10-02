@@ -165,31 +165,36 @@ body{
   font-size:16px;
 }
 
-.security-row{
-  margin-bottom:8px;
+.privacy-box{
+  margin:0 0 14px;
+  padding:14px 12px;
   border:1px solid rgba(255,255,255,.08);
   border-radius:14px;
-  padding:14px 12px;
-  background:rgba(0,0,0,.18);
+  background:rgba(0,0,0,.16);
 }
-
-.security-value{
+.privacy-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.privacy-label{
+  color:#929caf;
+  font-size:14px;
+}
+.privacy-value{
   font-size:15px;
   font-weight:800;
 }
-
-.security-yes{
-  color:#ff6b6b;
+.privacy-value.yes{ color:#ff6b6b; }
+.privacy-value.no{ color:#00ff9d; }
+.privacy-value.possible{ color:#ffd166; }
+.privacy-type{
+  margin-top:6px;
+  color:#9da7ba;
+  font-size:12px;
+  text-align:right;
 }
-
-.security-no{
-  color:#00ff9d;
-}
-
-.security-unknown{
-  color:#ffd166;
-}
-
 .status{
   text-align:center;
   color:#9da7ba;
@@ -315,7 +320,7 @@ function showError(text){
 }
 
 
-function showData(data){
+function showData(data, showPrivacy = false){
 
   if(!data){
     showError("No information received.");
@@ -349,23 +354,22 @@ function showData(data){
       </span>
     </div>
 
-    <div class="security-row">
-      <div class="row" style="padding:0;border-bottom:0;">
-        <span class="label">🛡️ VPN / Proxy</span>
-        <span class="value security-value ${
-          String(data.vpnProxy || "Unknown").toUpperCase() === "YES"
-            ? "security-yes"
-            : String(data.vpnProxy || "Unknown").toUpperCase() === "NO"
-              ? "security-no"
-              : "security-unknown"
+    ${showPrivacy ? `
+    <div class="privacy-box">
+      <div class="privacy-head">
+        <span class="privacy-label">🛡️ VPN / Proxy Detection</span>
+        <span class="privacy-value ${
+          data.vpnProxy === "YES" ? "yes" :
+          data.vpnProxy === "POSSIBLE" ? "possible" : "no"
         }">
           ${data.vpnProxy || "Unknown"}
         </span>
       </div>
-      <div style="text-align:right;color:#929caf;font-size:12px;margin-top:5px;">
+      <div class="privacy-type">
         ${data.vpnProxyType || "Detection unavailable"}
       </div>
     </div>
+    ` : ""}
 
     <div class="row">
       <span class="label">Country</span>
@@ -464,7 +468,7 @@ async function loadMyIP(){
 
     const data = await response.json();
 
-    showData(data);
+    showData(data, true);
 
   }catch(error){
 
@@ -512,7 +516,7 @@ async function searchIP(){
       );
     }
 
-    showData(data);
+    showData(data, false);
 
   }catch(error){
 
