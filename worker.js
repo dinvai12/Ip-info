@@ -59,6 +59,28 @@ export default {
             );
           }
 
+          // 🛡️ VPN / Proxy detection from IP99 risk signals
+          const riskSignals = Array.isArray(data.risk?.signals)
+            ? data.risk.signals.map(String).map(s => s.toLowerCase())
+            : [];
+
+          const vpnDetected = riskSignals.includes("vpn");
+          const proxyDetected = riskSignals.includes("proxy");
+
+          let vpnProxy = "NO";
+          let vpnProxyType = "None detected";
+
+          if (vpnDetected && proxyDetected) {
+            vpnProxy = "YES";
+            vpnProxyType = "VPN + Proxy";
+          } else if (vpnDetected) {
+            vpnProxy = "YES";
+            vpnProxyType = "VPN";
+          } else if (proxyDetected) {
+            vpnProxy = "YES";
+            vpnProxyType = "Proxy";
+          }
+
           // 🔢 ASN
           const asnNumber = data.network?.asn;
 
@@ -161,6 +183,9 @@ export default {
 
             isp: isp,
 
+            vpnProxy: vpnProxy,
+            vpnProxyType: vpnProxyType,
+
             colo: "N/A"
           };
 
@@ -190,9 +215,54 @@ export default {
 
       // 🌐 Visitor's own IP — Cloudflare
       const cf = request.cf || {};
+      const visitorIP = request.headers.get("CF-Connecting-IP") || "Unknown";
+
+      let vpnProxy = "Unknown";
+      let vpnProxyType = "Detection unavailable";
+
+      // Use IP99 risk data for the visitor's public IP.
+      if (visitorIP !== "Unknown") {
+        try {
+          const riskResponse = await fetch(
+            `https://ip99.com/v1/ip/${encodeURIComponent(visitorIP)}`,
+            {
+              headers: {
+                "X-API-Key": env.IP99_API_KEY,
+                "Accept": "application/json"
+              }
+            }
+          );
+
+          if (riskResponse.ok) {
+            const riskData = await riskResponse.json();
+            const signals = Array.isArray(riskData.risk?.signals)
+              ? riskData.risk.signals.map(String).map(s => s.toLowerCase())
+              : [];
+
+            const hasVPN = signals.includes("vpn");
+            const hasProxy = signals.includes("proxy");
+
+            if (hasVPN && hasProxy) {
+              vpnProxy = "YES";
+              vpnProxyType = "VPN + Proxy";
+            } else if (hasVPN) {
+              vpnProxy = "YES";
+              vpnProxyType = "VPN";
+            } else if (hasProxy) {
+              vpnProxy = "YES";
+              vpnProxyType = "Proxy";
+            } else {
+              vpnProxy = "NO";
+              vpnProxyType = "None detected";
+            }
+          }
+        } catch {
+          // Keep Unknown if the risk lookup fails.
+        }
+      }
 
       const data = {
-        ip: request.headers.get("CF-Connecting-IP") || "Unknown",
+        ip: visitorIP,
         country: cf.country || "Unknown",
         city: cf.city || "Unknown",
         region: cf.region || "Unknown",
@@ -202,6 +272,8 @@ export default {
         longitude: cf.longitude || "Unknown",
         asn: cf.asn ? `AS${cf.asn}` : "Unknown",
         isp: cf.asOrganization || "Unknown",
+        vpnProxy: vpnProxy,
+        vpnProxyType: vpnProxyType,
         colo: cf.colo || "Unknown"
       };
 

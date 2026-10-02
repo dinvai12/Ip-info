@@ -165,6 +165,31 @@ body{
   font-size:16px;
 }
 
+.security-row{
+  margin-bottom:8px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:14px 12px;
+  background:rgba(0,0,0,.18);
+}
+
+.security-value{
+  font-size:15px;
+  font-weight:800;
+}
+
+.security-yes{
+  color:#ff6b6b;
+}
+
+.security-no{
+  color:#00ff9d;
+}
+
+.security-unknown{
+  color:#ffd166;
+}
+
 .status{
   text-align:center;
   color:#9da7ba;
@@ -322,6 +347,24 @@ function showData(data){
       <span class="value ip-value">
         ${data.ip || "Unknown"}
       </span>
+    </div>
+
+    <div class="security-row">
+      <div class="row" style="padding:0;border-bottom:0;">
+        <span class="label">🛡️ VPN / Proxy</span>
+        <span class="value security-value ${
+          String(data.vpnProxy || "Unknown").toUpperCase() === "YES"
+            ? "security-yes"
+            : String(data.vpnProxy || "Unknown").toUpperCase() === "NO"
+              ? "security-no"
+              : "security-unknown"
+        }">
+          ${data.vpnProxy || "Unknown"}
+        </span>
+      </div>
+      <div style="text-align:right;color:#929caf;font-size:12px;margin-top:5px;">
+        ${data.vpnProxyType || "Detection unavailable"}
+      </div>
     </div>
 
     <div class="row">
