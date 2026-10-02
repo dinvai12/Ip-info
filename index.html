@@ -1,109 +1,514 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>DINUU IP INFO</title>
+<title>DINUU IP INFO</title>
 
-  <meta
-    name="description"
-    content="Check your public IP address, location, ASN, ISP and network information with DINUU IP INFO."
-  >
+<meta name="description"
+content="Check your public IP address, location, ASN, ISP and network information with DINUU IP INFO.">
 
-  <meta name="robots" content="index, follow">
+<meta name="robots" content="index, follow">
 
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+<style>
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+body{
+  min-height:100vh;
+  font-family:Arial,sans-serif;
+  background:radial-gradient(circle at top,#162447 0%,#080b14 45%,#05060a 100%);
+  color:#fff;
+  padding:25px 15px 35px;
+}
+
+.container{
+  width:100%;
+  max-width:720px;
+  margin:auto;
+}
+
+.header{
+  text-align:center;
+  margin-bottom:22px;
+}
+
+.header h1{
+  font-size:34px;
+  letter-spacing:3px;
+  color:#00e5ff;
+  text-shadow:0 0 20px rgba(0,229,255,.35);
+}
+
+.header p{
+  margin-top:9px;
+  color:#aeb7c7;
+  font-size:14px;
+}
+
+.search-box,
+.card{
+  background:rgba(18,24,38,.82);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:18px;
+  backdrop-filter:blur(15px);
+  box-shadow:0 15px 45px rgba(0,0,0,.3);
+}
+
+.search-box{
+  padding:18px;
+  margin-bottom:18px;
+}
+
+.search-title{
+  color:#00e5ff;
+  font-size:18px;
+  font-weight:700;
+  margin-bottom:12px;
+}
+
+.search-row{
+  display:flex;
+  gap:10px;
+}
+
+.search-input{
+  flex:1;
+  min-width:0;
+  height:52px;
+  padding:0 15px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  outline:none;
+  background:rgba(0,0,0,.25);
+  color:#fff;
+  font-size:15px;
+}
+
+.search-input::placeholder{
+  color:#788296;
+}
+
+.search-input:focus{
+  border-color:#00e5ff;
+}
+
+.search-btn{
+  height:52px;
+  padding:0 20px;
+  border:0;
+  border-radius:12px;
+  background:#00e5ff;
+  color:#061018;
+  font-weight:700;
+  font-size:15px;
+  cursor:pointer;
+}
+
+.my-ip-btn{
+  display:none;
+  margin-top:10px;
+  border:0;
+  background:transparent;
+  color:#00e5ff;
+  cursor:pointer;
+}
+
+.card{
+  padding:20px;
+}
+
+.section-title{
+  color:#00e5ff;
+  font-size:19px;
+  font-weight:700;
+  margin:5px 0 12px;
+}
+
+.network-title{
+  margin-top:27px;
+}
+
+.row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:15px;
+  padding:13px 4px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+
+.label{
+  color:#929caf;
+  font-size:14px;
+}
+
+.value{
+  color:#fff;
+  font-size:14px;
+  font-weight:600;
+  text-align:right;
+  word-break:break-word;
+}
+
+.ip-value{
+  color:#00e5ff;
+  font-size:18px;
+}
+
+.asn-value{
+  color:#00ff9d;
+  font-size:16px;
+}
+
+.status{
+  text-align:center;
+  color:#9da7ba;
+  padding:25px 5px;
+}
+
+.error{
+  color:#ff6b6b;
+  text-align:center;
+  padding:25px 5px;
+}
+
+.footer{
+  text-align:center;
+  margin-top:22px;
+  color:#697386;
+  font-size:12px;
+  line-height:1.8;
+}
+
+.made{
+  color:#00e5ff;
+  font-weight:700;
+}
+
+@media(max-width:500px){
+  .header h1{
+    font-size:29px;
+  }
+
+  .search-row{
+    gap:8px;
+  }
+
+  .search-btn{
+    padding:0 16px;
+  }
+
+  .card{
+    padding:16px;
+  }
+
+  .label,
+  .value{
+    font-size:13px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h1>DINUU IP INFO</h1>
+    <p>Your Public Network Information</p>
+  </div>
+
+  <div class="search-box">
+
+    <div class="search-title">
+      🔎 Search IP Address
+    </div>
+
+    <div class="search-row">
+
+      <input
+        id="ipInput"
+        class="search-input"
+        type="text"
+        placeholder="Enter IP address..."
+        autocomplete="off"
+        spellcheck="false"
+      >
+
+      <button id="searchBtn" class="search-btn">
+        Search
+      </button>
+
+    </div>
+
+    <button id="myIpBtn" class="my-ip-btn">
+      ↩ Show My IP
+    </button>
+
+  </div>
+
+  <div class="card" id="infoCard">
+    <div class="status">
+      Loading your network information...
+    </div>
+  </div>
+
+  <div class="footer">
+    Information provided by Cloudflare<br>
+    <span class="made">MADE BY DINUU</span>
+  </div>
+
+</div>
+
+<script>
+
+const API_URL = "/api";
+
+const card = document.getElementById("infoCard");
+const input = document.getElementById("ipInput");
+const searchBtn = document.getElementById("searchBtn");
+const myIpBtn = document.getElementById("myIpBtn");
+
+
+function showLoading(text){
+  card.innerHTML = `
+    <div class="status">${text}</div>
+  `;
+}
+
+
+function showError(text){
+  card.innerHTML = `
+    <div class="error">${text}</div>
+  `;
+}
+
+
+function showData(data){
+
+  if(!data){
+    showError("No information received.");
+    return;
+  }
+
+  if(data.error){
+    showError(data.message || "IP lookup failed.");
+    return;
+  }
+
+  let asn = data.asn || "Unknown";
+
+  if(
+    asn !== "Unknown" &&
+    !String(asn).toUpperCase().startsWith("AS")
+  ){
+    asn = "AS" + asn;
+  }
+
+  card.innerHTML = `
+
+    <div class="section-title">
+      IP Information
+    </div>
+
+    <div class="row">
+      <span class="label">IP Address</span>
+      <span class="value ip-value">
+        ${data.ip || "Unknown"}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Country</span>
+      <span class="value">
+        ${data.country || "Unknown"}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">City</span>
+      <span class="value">
+        ${data.city || "Unknown"}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Region</span>
+      <span class="value">
+        ${data.region || "Unknown"}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Postal Code</span>
+      <span class="value">
+        ${data.postal || "Unknown"}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Timezone</span>
+      <span class="value">
+        ${data.timezone || "Unknown"}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Latitude</span>
+      <span class="value">
+        ${data.latitude ?? "Unknown"}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Longitude</span>
+      <span class="value">
+        ${data.longitude ?? "Unknown"}
+      </span>
+    </div>
+
+    <div class="section-title network-title">
+      Network / ASN Details
+    </div>
+
+    <div class="row">
+      <span class="label">ASN</span>
+      <span class="value asn-value">
+        ${asn}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Network / Organization</span>
+      <span class="value">
+        ${data.isp || "Unknown"}
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="label">Cloudflare Location</span>
+      <span class="value">
+        ${data.colo || "N/A"}
+      </span>
+    </div>
+
+  `;
+}
+
+
+async function loadMyIP(){
+
+  myIpBtn.style.display = "none";
+  input.value = "";
+
+  showLoading("Loading your network information...");
+
+  try{
+
+    const response = await fetch("/api",{
+      cache:"no-store"
+    });
+
+    if(!response.ok){
+      throw new Error("API request failed");
     }
 
-    body {
-      min-height: 100vh;
-      font-family: Arial, sans-serif;
-      background:
-        radial-gradient(circle at top, #162447 0%, #080b14 45%, #05060a 100%);
-      color: #ffffff;
-      padding: 25px 15px 35px;
+    const data = await response.json();
+
+    showData(data);
+
+  }catch(error){
+
+    console.error(error);
+
+    showError(
+      "Unable to load network information.<br>Please refresh the page."
+    );
+  }
+}
+
+
+async function searchIP(){
+
+  const ip = input.value.trim();
+
+  if(!ip){
+
+    showError("Please enter an IP address.");
+
+    input.focus();
+
+    return;
+  }
+
+  myIpBtn.style.display = "block";
+
+  showLoading("Searching " + ip + "...");
+
+  try{
+
+    const response = await fetch(
+      "/api?ip=" + encodeURIComponent(ip),
+      {
+        cache:"no-store"
+      }
+    );
+
+    const data = await response.json();
+
+    if(!response.ok || data.error){
+
+      throw new Error(
+        data.message || "IP lookup failed."
+      );
     }
 
-    .container {
-      width: 100%;
-      max-width: 720px;
-      margin: auto;
+    showData(data);
+
+  }catch(error){
+
+    console.error(error);
+
+    showError(
+      error.message || "Unable to find this IP address."
+    );
+  }
+}
+
+
+searchBtn.addEventListener(
+  "click",
+  searchIP
+);
+
+
+myIpBtn.addEventListener(
+  "click",
+  loadMyIP
+);
+
+
+input.addEventListener(
+  "keydown",
+  function(event){
+
+    if(event.key === "Enter"){
+      searchIP();
     }
 
-    /* HEADER */
+  }
+);
 
-    .header {
-      text-align: center;
-      margin-bottom: 22px;
-    }
 
-    .header h1 {
-      font-size: 34px;
-      letter-spacing: 3px;
-      color: #00e5ff;
-      text-shadow: 0 0 20px rgba(0, 229, 255, 0.35);
-    }
+loadMyIP();
 
-    .header p {
-      margin-top: 9px;
-      color: #aeb7c7;
-      font-size: 14px;
-    }
+</script>
 
-    /* SEARCH */
-
-    .search-box {
-      background: rgba(18, 24, 38, 0.82);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 18px;
-      padding: 18px;
-      margin-bottom: 18px;
-      backdrop-filter: blur(15px);
-      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.3);
-    }
-
-    .search-title {
-      color: #00e5ff;
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 12px;
-    }
-
-    .search-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .search-input {
-      flex: 1;
-      min-width: 0;
-      height: 52px;
-      padding: 0 15px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      outline: none;
-      background: rgba(0, 0, 0, 0.25);
-      color: #ffffff;
-      font-size: 15px;
-    }
-
-    .search-input::placeholder {
-      color: #788296;
-    }
-
-    .search-input:focus {
-      border-color: #00e5ff;
-      box-shadow: 0 0 12px rgba(0, 229, 255, 0.15);
-    }
-
-    .search-btn {
-      height: 52px;
-      padding: 0 20px;
-      border: none;
-      border-radius: 12px;
-      background: #00e5ff;
+</body>
+  </html>
