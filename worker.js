@@ -24,6 +24,8 @@ export default {
     if (url.pathname === "/api") {
       const searchedIP = url.searchParams.get("ip");
       const vpnCheck = url.searchParams.get("vpn") === "1";
+      const torCheck = url.searchParams.get("tor") === "1";
+      const torCheck = url.searchParams.get("tor") === "1";
 
       const clientIP =
         searchedIP ||
@@ -36,6 +38,108 @@ export default {
         !/^[0-9a-fA-F:.]+$/.test(clientIP)
       ) {
         return json({ error: true, message: "Invalid IP address" }, 400);
+      }
+
+      // Dedicated Tor exit-node check.
+      // Uses the Tor Project's current bulk exit list. This is intentionally
+      // separate from the VPN checker so VPN/Proxy signals are not mislabeled as Tor.
+      if (torCheck) {
+        try {
+          const r = await safeFetch(
+            "https://check.torproject.org/torbulkexitlist",
+            {
+              headers: {
+                "Accept": "text/plain",
+                "Cache-Control": "no-cache"
+              }
+            },
+            7000
+          );
+
+          if (!r.ok) {
+            return json({
+              error: true,
+              message: `Tor Project list unavailable (${r.status})`
+            }, 502);
+          }
+
+          const body = await r.text();
+          const exits = new Set(
+            body
+              .split(/\s+/)
+              .map(s => s.trim())
+              .filter(s => /^[0-9a-fA-F:.]+$/.test(s))
+          );
+
+          const isTorExit = exits.has(clientIP);
+
+          return json({
+            ip: clientIP,
+            tor: isTorExit,
+            status: isTorExit ? "detected" : "clean",
+            source: "Tor Project Bulk Exit List",
+            checked_at: new Date().toISOString(),
+            message: isTorExit
+              ? "This IP is currently listed as a Tor exit node."
+              : "This IP is not currently listed as a Tor exit node."
+          });
+        } catch {
+          return json({
+            error: true,
+            message: "Tor check service unavailable"
+          }, 502);
+        }
+      }
+
+      // Dedicated Tor exit-node check.
+      // Uses the Tor Project's current bulk exit list. This is intentionally
+      // separate from the VPN checker so VPN/Proxy signals are not mislabeled as Tor.
+      if (torCheck) {
+        try {
+          const r = await safeFetch(
+            "https://check.torproject.org/torbulkexitlist",
+            {
+              headers: {
+                "Accept": "text/plain",
+                "Cache-Control": "no-cache"
+              }
+            },
+            7000
+          );
+
+          if (!r.ok) {
+            return json({
+              error: true,
+              message: `Tor Project list unavailable (${r.status})`
+            }, 502);
+          }
+
+          const body = await r.text();
+          const exits = new Set(
+            body
+              .split(/\s+/)
+              .map(s => s.trim())
+              .filter(s => /^[0-9a-fA-F:.]+$/.test(s))
+          );
+
+          const isTorExit = exits.has(clientIP);
+
+          return json({
+            ip: clientIP,
+            tor: isTorExit,
+            status: isTorExit ? "detected" : "clean",
+            source: "Tor Project Bulk Exit List",
+            checked_at: new Date().toISOString(),
+            message: isTorExit
+              ? "This IP is currently listed as a Tor exit node."
+              : "This IP is not currently listed as a Tor exit node."
+          });
+        } catch {
+          return json({
+            error: true,
+            message: "Tor check service unavailable"
+          }, 502);
+        }
       }
 
       if (vpnCheck) {
@@ -178,10 +282,6 @@ export default {
 
             if (r.ok) {
               const d = await r.json();
-
-              // IPHub block values:
-              // 0 = residential, 1 = hosting/server, 2 = non-residential proxy/VPN/Tor.
-              // Only block 2 is treated as a VPN signal here.
               const yes = Number(d?.block) === 2;
 
               results.iphub = yes ? "VPN" : "No VPN";
@@ -202,16 +302,11 @@ export default {
             env.VPNDETECTION_KEY ||
             "";
 
-          // Official endpoint is GET https://api.vpndetection.io/{ip}.
-          // Keyless requests are supported on the free allowance.
           const endpoint =
             `https://api.vpndetection.io/${encodeURIComponent(clientIP)}`;
 
           const headers = { "Accept": "application/json" };
 
-          // Keep the key server-side. The public API currently works
-          // without a key, so we use the documented keyless endpoint.
-          // This also avoids sending an unsupported query parameter.
           const r = await safeFetch(endpoint, { headers });
 
           if (r.ok) {
@@ -353,6 +448,19 @@ export default {
       });
     }
 
-    return env.ASSETS.fetch(request);
+    const response = await env.ASSETS.fetch(request);
+
+    const headers = new Headers(response.headers);
+
+    headers.set(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data: https:; frame-src 'self' https:;"
+    );
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
   }
 };

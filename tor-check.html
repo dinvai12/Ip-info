@@ -5,37 +5,93 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tor Check - DINUU IP INFO</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#080d18;color:#eef2ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
-.wrap{max-width:760px;margin:auto;padding:28px 18px 50px}a{color:#67e8f9;text-decoration:none}
-.back{display:inline-block;margin-bottom:24px;padding:10px 14px;border:1px solid #263247;border-radius:12px;background:#111a2a}
-.card{padding:22px;border:1px solid #263247;border-radius:20px;background:#101827;box-shadow:0 12px 40px rgba(0,0,0,.18)}
-h1{margin:0 0 8px;font-size:28px}.sub{opacity:.65;margin-bottom:22px}
-button{border:0;border-radius:13px;padding:13px 18px;background:#16d5ed;color:#061018;font-weight:700;cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:18px}
-.item{padding:13px;border-radius:12px;background:#0b1321;border:1px solid #202c40}
-.label{font-size:12px;opacity:.6;margin-bottom:5px}.value{font-weight:650;word-break:break-word}
-.status{font-size:20px;font-weight:800;margin-top:18px}
+*{box-sizing:border-box}
+:root{color-scheme:dark}
+body{margin:0;min-height:100vh;color:#f4f7ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 20% 10%,rgba(59,130,246,.20),transparent 35%),radial-gradient(circle at 90% 80%,rgba(168,85,247,.18),transparent 35%),#070b18}
+.wrap{width:min(760px,100%);margin:auto;padding:24px 16px 50px}
+.back{display:inline-block;margin-bottom:18px;padding:10px 14px;border:1px solid rgba(255,255,255,.15);border-radius:13px;background:rgba(255,255,255,.07);color:#fff;text-decoration:none}
+.card{padding:22px;border:1px solid rgba(255,255,255,.16);border-radius:24px;background:rgba(18,25,50,.68);box-shadow:0 18px 60px rgba(0,0,0,.25);backdrop-filter:blur(14px)}
+h1{margin:0 0 7px;font-size:29px}.sub{opacity:.68;line-height:1.5;margin-bottom:20px}
+.row{display:flex;gap:9px;margin-bottom:10px}.input{flex:1;min-width:0;border:1px solid rgba(255,255,255,.15);border-radius:14px;background:rgba(255,255,255,.07);color:#fff;padding:14px;font-size:15px;outline:none}.input:focus{border-color:rgba(125,211,252,.65)}
+button{border:0;border-radius:14px;padding:13px 17px;background:linear-gradient(135deg,#22d3ee,#8b5cf6);color:#fff;font-weight:800;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.my{width:100%;margin-top:4px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+.result{margin-top:18px;padding:18px;border-radius:18px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.10);text-align:center}.icon{font-size:42px}.status{font-size:23px;font-weight:850;margin:6px 0}.ip{opacity:.75;word-break:break-all}.ok{color:#7dd3fc}.no{color:#86efac}.warn{color:#fcd34d}.error{color:#fca5a5}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:14px;text-align:left}.item{padding:12px;border-radius:13px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}.label{font-size:11px;opacity:.55;margin-bottom:4px}.value{font-weight:700;word-break:break-word}
+.note{font-size:12px;opacity:.52;line-height:1.5;margin-top:16px;text-align:center}
+@media(max-width:520px){.row{flex-direction:column}.row button{width:100%}.card{padding:18px}}
 </style>
 </head>
-<body><main class="wrap">
-<a class="back" href="/">← Back to IP Info</a>
+<body>
+<main class="wrap">
+<a class="back" href="/">← Back to DINUU IP INFO</a>
 <div class="card">
 <h1>🧅 Tor Check</h1>
-<div class="sub">Check whether your current public IP is recognized as a Tor exit node.</div>
-<button id="check">Check My IP</button><div id="status" class="status"></div><div id="grid" class="grid"></div>
+<div class="sub">Check whether an IP address is currently listed as a Tor exit node.</div>
+<div class="row">
+  <input id="ip" class="input" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Enter IP or URL containing an IP…">
+  <button id="check">Check</button>
+</div>
+<button id="my" class="my">↩ Check My Current IP</button>
+<div id="result" class="result">
+  <div class="icon">🧅</div>
+  <div class="status">Ready</div>
+  <div class="ip">Enter an IP address or a URL containing an IP.</div>
+</div>
+<div class="note">Detection is based on the Tor Project's current Bulk Exit List. A VPN/proxy signal by itself is not treated as Tor.</div>
 </div>
 </main>
 <script>
-document.getElementById("check").onclick=async()=>{
- const st=document.getElementById("status"),g=document.getElementById("grid");
- st.textContent="Checking…";g.innerHTML="";
- try{
-   const r=await fetch("/api?tor=1");
-   const d=await r.json();
-   st.textContent=d.tor?"🧅 Tor detected":"✅ Tor not detected";
-   g.innerHTML=`<div class="item"><div class="label">IP</div><div class="value">${d.ip||"Unknown"}</div></div>`;
- }catch(e){st.textContent="Unable to check right now";}
+const input=document.getElementById('ip');
+const check=document.getElementById('check');
+const my=document.getElementById('my');
+const result=document.getElementById('result');
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function isIP(v){return /^[0-9a-fA-F:.]+$/.test(v)&&v.length<=45}
+function normalize(v){
+  v=String(v||'').trim();
+  if(!v)return '';
+  if(isIP(v))return v;
+  try{
+    const u=new URL(v.includes('://')?v:'https://'+v);
+    return isIP(u.hostname)?u.hostname:'';
+  }catch{return ''}
+}
+function renderLoading(){result.innerHTML='<div class="icon">⏳</div><div class="status">Checking…</div><div class="ip">Contacting the Tor Project exit list.</div>'}
+function renderError(msg){result.innerHTML='<div class="icon">⚠️</div><div class="status error">Check failed</div><div class="ip">'+esc(msg)+'</div>'}
+function render(d){
+  if(d.error){renderError(d.message||'Tor check failed');return}
+  const yes=d.tor===true;
+  result.innerHTML=`
+    <div class="icon">${yes?'🧅':'🛡️'}</div>
+    <div class="status ${yes?'ok':'no'}">${yes?'Tor Exit Detected':'Not Listed as Tor Exit'}</div>
+    <div class="ip">${esc(d.ip)}</div>
+    <div class="meta">
+      <div class="item"><div class="label">Status</div><div class="value">${yes?'Currently listed':'Not currently listed'}</div></div>
+      <div class="item"><div class="label">Source</div><div class="value">${esc(d.source)}</div></div>
+    </div>`;
+}
+async function run(value){
+  const ip=normalize(value);
+  if(!ip){renderError('Please enter a valid IPv4/IPv6 address, or a URL whose hostname is an IP address.');return}
+  check.disabled=true;my.disabled=true;renderLoading();
+  try{
+    const r=await fetch('/api?tor=1&ip='+encodeURIComponent(ip),{cache:'no-store'});
+    const d=await r.json();
+    if(!r.ok||d.error)throw new Error(d.message||'Tor check failed');
+    render(d);
+  }catch(e){renderError(e.message||'Tor check service unavailable')}
+  check.disabled=false;my.disabled=false;
+}
+check.onclick=()=>run(input.value);
+input.addEventListener('keydown',e=>{if(e.key==='Enter')run(input.value)});
+my.onclick=async()=>{
+  check.disabled=true;my.disabled=true;renderLoading();
+  try{
+    const r=await fetch('/api',{cache:'no-store'});const d=await r.json();
+    if(!r.ok||d.error)throw new Error(d.message||'Could not get your IP');
+    input.value=d.ip||'';await run(d.ip||'');
+  }catch(e){renderError(e.message||'Could not get your IP');check.disabled=false;my.disabled=false}
 };
 </script>
-<link rel="stylesheet" href="/glass-theme.css">
-</body></html>
+</body>
+</html>
