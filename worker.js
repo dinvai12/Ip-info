@@ -25,7 +25,6 @@ export default {
       const searchedIP = url.searchParams.get("ip");
       const vpnCheck = url.searchParams.get("vpn") === "1";
       const torCheck = url.searchParams.get("tor") === "1";
-      const torCheck = url.searchParams.get("tor") === "1";
 
       const clientIP =
         searchedIP ||
