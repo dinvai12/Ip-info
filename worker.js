@@ -21,19 +21,28 @@ export default {
       }
     };
 
-    // Retry only temporary failures/timeouts. 4xx responses are not retried.
-    const retryFetch = async (input, init = {}, timeout = 5000, retries = 1, delay = 300) => {
+    // Retry only network/timeouts and 5xx responses. Do not retry 4xx responses.
+    const fetchWithRetry = async (input, init = {}, timeout = 5000, retries = 1) => {
       let lastError;
+
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-          const r = await safeFetch(input, init, timeout);
-          if (r.ok || (r.status >= 400 && r.status < 500) || attempt === retries) return r;
-        } catch (e) {
-          lastError = e;
-          if (attempt === retries) throw e;
+          const response = await safeFetch(input, init, timeout);
+
+          if (response.ok || (response.status >= 400 && response.status < 500)) {
+            return response;
+          }
+
+          lastError = new Error(`HTTP ${response.status}`);
+        } catch (error) {
+          lastError = error;
         }
-        await new Promise(resolve => setTimeout(resolve, delay));
+
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 350));
+        }
       }
+
       throw lastError || new Error("Request failed");
     };
 
@@ -116,16 +125,13 @@ export default {
           vpndetection: "Unavailable"
         };
 
-        const signals = [];
-        let detected = 0;
-        let checked = 0;
-
-        // All six sources run in parallel. Only a temporary failure/timeout is retried once.
-        await Promise.all([
-          // 1. IPLogs
+        // Run all independent providers in parallel. Each provider gets one retry
+        // for timeouts/network errors/5xx responses, reducing random 4/6 results
+        // without retrying normal 4xx API errors.
+        const checks = [
           (async () => {
             try {
-              const r = await retryFetch("https://iplogs.com/v1/check", {
+              const r = await fetchWithRetry("https://iplogs.com/v1/check", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -133,144 +139,170 @@ export default {
                 },
                 body: JSON.stringify({ ip: clientIP })
               });
-              if (r.ok) {
-                const d = await r.json();
-                const yes =
-                  d.is_vpn === true ||
-                  d.verdict === "vpn_detected" ||
-                  d.verdict === "vpn_likely";
-                results.iplogs = yes ? "VPN" : "No VPN";
-                checked++;
-                if (yes) { detected++; signals.push("IPLogs: VPN"); }
-              }
-            } catch {}
+              if (!r.ok) return { key: "iplogs" };
+              const d = await r.json();
+              const yes =
+                d.is_vpn === true ||
+                d.verdict === "vpn_detected" ||
+                d.verdict === "vpn_likely";
+              return { key: "iplogs", value: yes ? "VPN" : "No VPN", detected: yes, signal: yes ? "IPLogs: VPN" : null };
+            } catch {
+              return { key: "iplogs" };
+            }
           })(),
 
-          // 2. IP99
           (async () => {
             try {
               const headers = { "Accept": "application/json" };
               if (env.IP99_API_KEY) headers["X-API-Key"] = env.IP99_API_KEY;
-              const r = await retryFetch(
+              const r = await fetchWithRetry(
                 `https://ip99.com/v1/ip/${encodeURIComponent(clientIP)}`,
                 { headers }
               );
-              if (r.ok) {
-                const d = await r.json();
-                const rs = Array.isArray(d.risk?.signals) ? d.risk.signals : [];
-                const yes = rs.some(s => String(s).toLowerCase() === "vpn");
-                results.ip99 = yes ? "VPN" : "No VPN";
-                checked++;
-                if (yes) { detected++; signals.push("IP99: VPN"); }
-              }
-            } catch {}
+              if (!r.ok) return { key: "ip99" };
+              const d = await r.json();
+              const rs = Array.isArray(d.risk?.signals) ? d.risk.signals : [];
+              const yes = rs.some(s => String(s).toLowerCase() === "vpn");
+              return { key: "ip99", value: yes ? "VPN" : "No VPN", detected: yes, signal: yes ? "IP99: VPN" : null };
+            } catch {
+              return { key: "ip99" };
+            }
           })(),
 
-          // 3. VPNAPI.io
           (async () => {
             try {
-              if (env.VPNAPI_KEY) {
-                const r = await retryFetch(
-                  `https://vpnapi.io/api/${encodeURIComponent(clientIP)}?key=${encodeURIComponent(env.VPNAPI_KEY)}`,
-                  { headers: { "Accept": "application/json" } }
-                );
-                if (r.ok) {
+              if (!env.VPNAPI_KEY) return { key: "vpnapi" };
+              const r = await fetchWithRetry(
+                `https://vpnapi.io/api/${encodeURIComponent(clientIP)}?key=${encodeURIComponent(env.VPNAPI_KEY)}`,
+                { headers: { "Accept": "application/json" } }
+              );
+              if (!r.ok) return { key: "vpnapi" };
+              const d = await r.json();
+              const yes = d?.security?.vpn === true;
+              return { key: "vpnapi", value: yes ? "VPN" : "No VPN", detected: yes, signal: yes ? "VPNAPI.io: VPN" : null };
+            } catch {
+              return { key: "vpnapi" };
+            }
+          })(),
+
+          (async () => {
+            try {
+              if (!env.SCAMALYTICS_USERNAME || !env.SCAMALYTICS_API_KEY) {
+                return { key: "scamalytics" };
+              }
+
+              const bases = env.SCAMALYTICS_API_BASE
+                ? [env.SCAMALYTICS_API_BASE]
+                : [
+                    "https://api12.scamalytics.com/v3/",
+                    "https://api11.scamalytics.com/v3/"
+                  ];
+
+              for (const base of bases) {
+                try {
+                  const endpoint =
+                    base.replace(/\/+$/, "") +
+                    "/" + encodeURIComponent(env.SCAMALYTICS_USERNAME) +
+                    "?key=" + encodeURIComponent(env.SCAMALYTICS_API_KEY) +
+                    "&ip=" + encodeURIComponent(clientIP);
+
+                  const r = await fetchWithRetry(endpoint, {
+                    headers: { "Accept": "application/json" }
+                  });
+
+                  if (!r.ok) continue;
                   const d = await r.json();
-                  const yes = d?.security?.vpn === true;
-                  results.vpnapi = yes ? "VPN" : "No VPN";
-                  checked++;
-                  if (yes) { detected++; signals.push("VPNAPI.io: VPN"); }
-                }
+                  if (d?.scamalytics?.status !== "ok") continue;
+
+                  const yes = d?.scamalytics?.scamalytics_proxy?.is_vpn === true;
+                  return {
+                    key: "scamalytics",
+                    value: yes ? "VPN" : "No VPN",
+                    detected: yes,
+                    signal: yes ? "Scamalytics: VPN" : null
+                  };
+                } catch {}
               }
             } catch {}
+
+            return { key: "scamalytics" };
           })(),
 
-          // 4. Scamalytics
           (async () => {
             try {
-              if (env.SCAMALYTICS_USERNAME && env.SCAMALYTICS_API_KEY) {
-                const bases = env.SCAMALYTICS_API_BASE
-                  ? [env.SCAMALYTICS_API_BASE]
-                  : [
-                      "https://api12.scamalytics.com/v3/",
-                      "https://api11.scamalytics.com/v3/"
-                    ];
+              if (!env.IPHUB_API_KEY) return { key: "iphub" };
 
-                for (const base of bases) {
-                  try {
-                    const endpoint =
-                      base.replace(/\/+$/, "") +
-                      "/" + encodeURIComponent(env.SCAMALYTICS_USERNAME) +
-                      "?key=" + encodeURIComponent(env.SCAMALYTICS_API_KEY) +
-                      "&ip=" + encodeURIComponent(clientIP);
-
-                    const r = await retryFetch(endpoint, {
-                      headers: { "Accept": "application/json" }
-                    });
-                    if (!r.ok) continue;
-
-                    const d = await r.json();
-                    if (d?.scamalytics?.status !== "ok") continue;
-
-                    const yes = d?.scamalytics?.scamalytics_proxy?.is_vpn === true;
-                    results.scamalytics = yes ? "VPN" : "No VPN";
-                    checked++;
-                    if (yes) { detected++; signals.push("Scamalytics: VPN"); }
-                    break;
-                  } catch {}
-                }
-              }
-            } catch {}
-          })(),
-
-          // 5. IPHub
-          (async () => {
-            try {
-              if (env.IPHUB_API_KEY) {
-                const r = await retryFetch(
-                  `https://v2.api.iphub.info/v2/${encodeURIComponent(clientIP)}`,
-                  {
-                    headers: {
-                      "X-Key": env.IPHUB_API_KEY,
-                      "Accept": "application/json"
-                    }
+              const r = await fetchWithRetry(
+                `https://v2.api.iphub.info/ip/${encodeURIComponent(clientIP)}`,
+                {
+                  headers: {
+                    "X-Key": env.IPHUB_API_KEY,
+                    "Accept": "application/json"
                   }
-                );
-                if (r.ok) {
-                  const d = await r.json();
-                  const yes = Number(d?.block) === 2;
-                  results.iphub = yes ? "VPN" : "No VPN";
-                  checked++;
-                  if (yes) { detected++; signals.push("IPHub: VPN/Proxy/Tor"); }
                 }
-              }
-            } catch {}
+              );
+
+              if (!r.ok) return { key: "iphub" };
+              const d = await r.json();
+              const yes = Number(d?.block) === 2;
+              return {
+                key: "iphub",
+                value: yes ? "VPN" : "No VPN",
+                detected: yes,
+                signal: yes ? "IPHub: VPN/Proxy/Tor" : null
+              };
+            } catch {
+              return { key: "iphub" };
+            }
           })(),
 
-          // 6. VPNDetection.io
           (async () => {
             try {
+              // Keep the existing key names available for compatibility, but use
+              // the documented keyless endpoint already used by the site.
               const apiKey = env.VPNDETECTION_API_KEY || env.VPNDETECTION_KEY || "";
-              let endpoint = `https://api.vpndetection.io/v1/${encodeURIComponent(clientIP)}`;
-              if (apiKey) endpoint += `?key=${encodeURIComponent(apiKey)}`;
+              void apiKey;
 
-              const r = await retryFetch(endpoint, {
+              const endpoint =
+                `https://api.vpndetection.io/${encodeURIComponent(clientIP)}`;
+              const r = await fetchWithRetry(endpoint, {
                 headers: { "Accept": "application/json" }
               });
-              if (r.ok) {
-                const d = await r.json();
-                const yes =
-                  d?.is_vpn === true ||
-                  d?.vpn === true ||
-                  d?.data?.is_vpn === true ||
-                  d?.data?.vpn === true;
-                results.vpndetection = yes ? "VPN" : "No VPN";
-                checked++;
-                if (yes) { detected++; signals.push("VPNDetection.io: VPN"); }
-              }
-            } catch {}
+
+              if (!r.ok) return { key: "vpndetection" };
+              const d = await r.json();
+              const yes =
+                d?.is_vpn === true ||
+                d?.vpn === true ||
+                d?.data?.is_vpn === true ||
+                d?.data?.vpn === true;
+
+              return {
+                key: "vpndetection",
+                value: yes ? "VPN" : "No VPN",
+                detected: yes,
+                signal: yes ? "VPNDetection.io: VPN" : null
+              };
+            } catch {
+              return { key: "vpndetection" };
+            }
           })()
-        ]);
+        ];
+
+        const settled = await Promise.all(checks);
+        let detected = 0;
+        let checked = 0;
+        const signals = [];
+
+        for (const result of settled) {
+          if (!result?.key || !result.value) continue;
+          results[result.key] = result.value;
+          checked++;
+          if (result.detected) {
+            detected++;
+            if (result.signal) signals.push(result.signal);
+          }
+        }
 
         let status = "clean";
         if (detected >= 2) status = "detected";
