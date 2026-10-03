@@ -1,1 +1,111 @@
+/* DINUU Glassmorphism Theme — UI only. Existing JS/API logic untouched. */
+:root{
+  --glass-bg:rgba(18,28,52,.52);
+  --glass-bg-strong:rgba(12,22,43,.68);
+  --glass-border:rgba(255,255,255,.15);
+  --glass-border-soft:rgba(255,255,255,.09);
+  --glass-text:#f7f9ff;
+  --glass-muted:#aeb9cf;
+  --glass-cyan:#55ddff;
+  --glass-blue:#4d8dff;
+  --glass-purple:#b56cff;
+  --glass-green:#3ff2a3;
+  --glass-shadow:0 24px 70px rgba(0,0,0,.35);
+}
 
+html{background:#050914;scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(circle at 12% 8%,rgba(55,146,255,.24),transparent 28%),
+    radial-gradient(circle at 88% 14%,rgba(188,77,255,.20),transparent 26%),
+    radial-gradient(circle at 52% 88%,rgba(0,214,255,.14),transparent 30%),
+    linear-gradient(135deg,#050914 0%,#081225 48%,#090713 100%) !important;
+  color:var(--glass-text) !important;
+}
+
+body::before{
+  content:"";position:fixed;inset:-15%;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(circle at 20% 35%,rgba(0,205,255,.10),transparent 22%),
+    radial-gradient(circle at 78% 58%,rgba(166,84,255,.10),transparent 24%);
+  filter:blur(55px);animation:dinuGlassFloat 14s ease-in-out infinite alternate;
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(115deg,transparent 0%,rgba(255,255,255,.025) 45%,transparent 70%);
+}
+@keyframes dinuGlassFloat{from{transform:translate3d(-2%,0,0) scale(1)}to{transform:translate3d(2%,1%,0) scale(1.05)}}
+
+.container{position:relative}
+
+.card,.search-box,.tool-card,.tool-value,.dinu-menu-btn,.vpn-verdict,.item,.frame{
+  background:linear-gradient(135deg,rgba(255,255,255,.105),rgba(255,255,255,.035)) !important;
+  border:1px solid var(--glass-border) !important;
+  box-shadow:var(--glass-shadow),inset 0 1px 0 rgba(255,255,255,.08) !important;
+  backdrop-filter:blur(22px) saturate(145%) !important;
+  -webkit-backdrop-filter:blur(22px) saturate(145%) !important;
+}
+
+.card,.search-box{border-radius:24px !important}
+.item,.tool-value{border-radius:16px !important}
+.tool-card{border-radius:19px !important;transition:transform .2s ease,background .2s ease,border-color .2s ease,box-shadow .2s ease !important}
+.tool-card:hover{transform:translateY(-3px);background:linear-gradient(135deg,rgba(85,221,255,.14),rgba(181,108,255,.07)) !important;border-color:rgba(85,221,255,.38) !important;box-shadow:0 18px 45px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.12) !important}
+
+.header h1{color:#fff !important;text-shadow:0 0 28px rgba(85,221,255,.30) !important}
+.header h1::first-letter{color:var(--glass-cyan)}
+.header p,.label,.status,.vpn-sub,.footer,.tool-copy small{color:var(--glass-muted) !important}
+.section-title,.search-title,.made,.back-btn{color:var(--glass-cyan) !important}
+.ip-value{color:var(--glass-cyan) !important;text-shadow:0 0 18px rgba(85,221,255,.18)}
+.asn-value{color:var(--glass-green) !important}
+.value,.source-name,.tool-copy strong{color:#fff !important}
+
+.search-input{
+  background:rgba(4,10,23,.34) !important;border:1px solid rgba(255,255,255,.14) !important;
+  color:#fff !important;box-shadow:inset 0 1px 12px rgba(0,0,0,.12)
+}
+.search-input:focus{border-color:rgba(85,221,255,.75) !important;box-shadow:0 0 0 4px rgba(85,221,255,.09),inset 0 1px 12px rgba(0,0,0,.12)}
+.search-btn{
+  background:linear-gradient(135deg,#42dfff,#697cff 55%,#bd65ff) !important;color:#fff !important;
+  box-shadow:0 10px 28px rgba(75,137,255,.25),inset 0 1px 0 rgba(255,255,255,.3) !important;
+}
+.search-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+
+.menu-btn,#dinuuuMenuButton{
+  background:linear-gradient(135deg,rgba(85,221,255,.16),rgba(181,108,255,.12)) !important;
+  border-color:rgba(255,255,255,.18) !important;color:#fff !important;
+  box-shadow:0 12px 32px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.10) !important;
+  backdrop-filter:blur(20px) saturate(150%) !important;
+}
+#dinuuuOverlay{background:rgba(1,5,15,.62) !important;backdrop-filter:blur(7px)}
+#dinuuuSidebar{
+  background:linear-gradient(145deg,rgba(14,27,53,.82),rgba(22,12,44,.76)) !important;
+  border-right:1px solid rgba(255,255,255,.15) !important;
+  box-shadow:25px 0 80px rgba(0,0,0,.4) !important;
+  backdrop-filter:blur(28px) saturate(150%) !important;
+}
+.dinu-menu-btn:hover{background:linear-gradient(135deg,rgba(85,221,255,.15),rgba(181,108,255,.12)) !important;border-color:rgba(85,221,255,.28) !important}
+
+.row,.source-row{border-bottom-color:rgba(255,255,255,.09) !important}
+.tool-icon{filter:drop-shadow(0 0 9px rgba(85,221,255,.22))}
+.vpn-verdict{color:var(--glass-cyan) !important}
+
+button{font-family:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid rgba(85,221,255,.75);outline-offset:3px}
+
+/* Secondary pages */
+main{position:relative}
+.back{color:#fff !important;background:rgba(255,255,255,.07) !important;border-color:var(--glass-border) !important;box-shadow:0 12px 35px rgba(0,0,0,.22) !important;backdrop-filter:blur(18px) !important}
+main h1{color:#fff !important;text-shadow:0 0 25px rgba(85,221,255,.18)}
+main .sub,.note{color:var(--glass-muted) !important}
+main button{background:linear-gradient(135deg,#42dfff,#697cff 55%,#bd65ff) !important;color:#fff !important;box-shadow:0 10px 28px rgba(75,137,255,.22) !important}
+
+iframe{border-radius:18px !important}
+
+@media(max-width:600px){
+  body{padding-left:12px !important;padding-right:12px !important}
+  .card,.search-box{border-radius:20px !important}
+  .header h1{font-size:29px !important}
+  .search-row{flex-wrap:wrap}
+  .search-btn{flex:0 0 100%}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;scroll-behavior:auto !important}}
